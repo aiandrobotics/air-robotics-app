@@ -4,7 +4,7 @@
 [![Target](https://img.shields.io/badge/Target-iOS%2014%2B%20%7C%20Android%208.0%2B-green.svg)]()
 [![BLE Protocol](https://img.shields.io/badge/BLE-AIR%20Robotics%20v1%20(FAB0)-orange.svg)]()
 [![Offline First](https://img.shields.io/badge/Architecture-100%25%20Offline--First-purple.svg)]()
-[![License](https://img.shields.io/badge/License-Proprietary%20%2F%20Internal-lightgrey.svg)]()
+[![License](https://img.shields.io/badge/License-Apache%202.0%20%2F%20MIT-blue.svg)]()
 
 **AIR Robotics** is a universal, high-performance, cross-platform mobile companion platform built with **Flutter (Dart 3)** for controlling robots wirelessly over Bluetooth Low Energy (BLE).
 
@@ -279,5 +279,5 @@ For comprehensive milestone details and acceptance criteria, refer to [specs/roa
 - **[Mission & System Specification](specs/mission.md)**: Product purpose, core invariants, target audience, and architectural requirements.
 - **[Technology Stack & Architecture](specs/tech-stack.md)**: Detailed toolchain, GATT topology, 31-byte telemetry layout, and safety design.
 - **[Development Roadmap](specs/roadmap.md)**: Phase-by-phase implementation plan, component breakdowns, hardware testing milestones, and firmware file mapping.
-- **Authoritative ESP32 Firmware**: Live firmware source code is maintained at `/Users/intelligentmachine/workspace/fabrica/firmware` (BLE transport, packet layouts, motion sweeps, and storage). Consult this codebase when implementing protocol decoders, command opcodes, and Fabrica UI visualizers.
+- **Authoritative ESP32 Firmware**: Live firmware source code is maintained in the companion `fabrica` repository under `firmware/` (e.g. `<workspace>/fabrica/firmware` or `../fabrica/firmware`). Consult this codebase when implementing protocol decoders, command opcodes, and Fabrica UI visualizers.
 

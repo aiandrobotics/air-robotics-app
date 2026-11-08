@@ -7,23 +7,23 @@ Build, validate, and verify each milestone before moving to the next phase.
 
 ## 1. Authoritative Firmware Reference & Source Code Alignment
 
-When implementing Fabrica features, screens, protocol models, and hardware integrations, developers and agents **MUST directly refer to the authoritative ESP32 firmware source code** located at:
+When implementing Fabrica features, screens, protocol models, and hardware integrations, developers and agents **MUST directly refer to the authoritative ESP32 firmware source code** located in the companion `fabrica` repository at:
 
-📁 **`/Users/intelligentmachine/workspace/fabrica/firmware`**
+📁 **`<workspace>/fabrica/firmware`** (e.g. `../fabrica/firmware` or `../../fabrica/fabrica/firmware`)
 
 ### Firmware Source Code Mapping Table
 
 | Subsystem / Feature | Firmware Source (`firmware/main/`) | Mobile App Component |
 | :--- | :--- | :--- |
-| **BLE Transport & GATT Topology** | [`ble_transport.c`](file:///Users/intelligentmachine/workspace/fabrica/firmware/main/ble_transport.c), [`ble_transport.h`](file:///Users/intelligentmachine/workspace/fabrica/firmware/main/ble_transport.h) | `lib/core/ble/` — GATT UUIDs (`FAB0`, `FAB1`, `FAB2`, `FAB3`), DIS (`0x180A`), 120s pairing window, SMP bonding, RPA privacy resolution, 517B MTU exchange |
-| **Command Opcodes & Payloads** | [`command.h`](file:///Users/intelligentmachine/workspace/fabrica/firmware/main/command.h), [`remote_cmd.c`](file:///Users/intelligentmachine/workspace/fabrica/firmware/main/remote_cmd.c), [`remote_cmd.h`](file:///Users/intelligentmachine/workspace/fabrica/firmware/main/remote_cmd.h) | `lib/core/protocol/command_builder.dart` & `command_pipeline.dart` — Opcodes (`0x00`–`0x11`), argument serialization, command status acknowledgment codes |
-| **31-Byte Binary Telemetry** | [`telemetry.c`](file:///Users/intelligentmachine/workspace/fabrica/firmware/main/telemetry.c), [`telemetry.h`](file:///Users/intelligentmachine/workspace/fabrica/firmware/main/telemetry.h) | `lib/core/protocol/telemetry_packet.dart` & `telemetry_bus.dart` — Zero-allocation 31-byte Little-Endian wire unpacker, 10 Hz motion / 1 Hz idle stream handling |
-| **System State Machine** | [`state_machine.c`](file:///Users/intelligentmachine/workspace/fabrica/firmware/main/state_machine.c), [`state_machine.h`](file:///Users/intelligentmachine/workspace/fabrica/firmware/main/state_machine.h) | `lib/core/protocol/` & UI widgets — Machine states (`IDLE`, `RUNNING_MOTION`, `ESTOP`, `ERROR`, `CALIBRATING`) |
-| **LED Status Indicator** | [`led.c`](file:///Users/intelligentmachine/workspace/fabrica/firmware/main/led.c), [`led.h`](file:///Users/intelligentmachine/workspace/fabrica/firmware/main/led.h) | `lib/ui_engine/widget_catalog/status_banner_widget.dart` — Mirror firmware LED patterns (idle, pairing fast double-blink, estop, running, save success) |
-| **Servo Kinematics & Flap Motion** | [`motion.c`](file:///Users/intelligentmachine/workspace/fabrica/firmware/main/motion.c), [`motion.h`](file:///Users/intelligentmachine/workspace/fabrica/firmware/main/motion.h), [`pca9685.c`](file:///Users/intelligentmachine/workspace/fabrica/firmware/main/pca9685.c) | `lib/visualizers/fabrica/` — Flap channel mapping (Ch 0: Left, Ch 1: Right, Ch 2: Bottom, Ch 3: Top), fold angles ($0^\circ-180^\circ$), timing sweeps |
-| **NVS Presets & CRC32 Storage** | [`storage.c`](file:///Users/intelligentmachine/workspace/fabrica/firmware/main/storage.c), [`storage.h`](file:///Users/intelligentmachine/workspace/fabrica/firmware/main/storage.h) | `lib/core/protocol/crc32.dart` & `timeline_sequencer_widget.dart` — 212-byte `FAB3` sequence table, IEEE 802.3 CRC32 verification |
-| **Physical Button Hardware** | [`buttons.c`](file:///Users/intelligentmachine/workspace/fabrica/firmware/main/buttons.c), [`buttons.h`](file:///Users/intelligentmachine/workspace/fabrica/firmware/main/buttons.h) | Preset mapping (Buttons 1–4) & physical 3-second button hold pairing gate logic |
-| **Global Parameters & Bounds** | [`config.h`](file:///Users/intelligentmachine/workspace/fabrica/firmware/main/config.h) | Timing thresholds, angle bounds, safety limits, firmware version constants |
+| **BLE Transport & GATT Topology** | `ble_transport.c`, `ble_transport.h` | `lib/core/ble/` — GATT UUIDs (`FAB0`, `FAB1`, `FAB2`, `FAB3`), DIS (`0x180A`), 120s pairing window, SMP bonding, RPA privacy resolution, 517B MTU exchange |
+| **Command Opcodes & Payloads** | `command.h`, `remote_cmd.c`, `remote_cmd.h` | `lib/core/protocol/command_builder.dart` & `command_pipeline.dart` — Opcodes (`0x00`–`0x11`), argument serialization, command status acknowledgment codes |
+| **31-Byte Binary Telemetry** | `telemetry.c`, `telemetry.h` | `lib/core/protocol/telemetry_packet.dart` & `telemetry_bus.dart` — Zero-allocation 31-byte Little-Endian wire unpacker, 10 Hz motion / 1 Hz idle stream handling |
+| **System State Machine** | `state_machine.c`, `state_machine.h` | `lib/core/protocol/` & UI widgets — Machine states (`IDLE`, `RUNNING_MOTION`, `ESTOP`, `ERROR`, `CALIBRATING`) |
+| **LED Status Indicator** | `led.c`, `led.h` | `lib/ui_engine/widget_catalog/status_banner_widget.dart` — Mirror firmware LED patterns (idle, pairing fast double-blink, estop, running, save success) |
+| **Servo Kinematics & Flap Motion** | `motion.c`, `motion.h`, `pca9685.c` | `lib/visualizers/fabrica/` — Flap channel mapping (Ch 0: Left, Ch 1: Right, Ch 2: Bottom, Ch 3: Top), fold angles ($0^\circ-180^\circ$), timing sweeps |
+| **NVS Presets & CRC32 Storage** | `storage.c`, `storage.h` | `lib/core/protocol/crc32.dart` & `timeline_sequencer_widget.dart` — 212-byte `FAB3` sequence table, IEEE 802.3 CRC32 verification |
+| **Physical Button Hardware** | `buttons.c`, `buttons.h` | Preset mapping (Buttons 1–4) & physical 3-second button hold pairing gate logic |
+| **Global Parameters & Bounds** | `config.h` | Timing thresholds, angle bounds, safety limits, firmware version constants |
 
 ---
 
@@ -51,7 +51,7 @@ Testing against the physical Fabrica robot follows an incremental verification p
 ---
 
 ## Phase 1 — Project Skeleton, Core Theming & Protocol Models
-- **Firmware Reference**: Inspect [`command.h`](file:///Users/intelligentmachine/workspace/fabrica/firmware/main/command.h), [`telemetry.h`](file:///Users/intelligentmachine/workspace/fabrica/firmware/main/telemetry.h), and [`storage.h`](file:///Users/intelligentmachine/workspace/fabrica/firmware/main/storage.h) for exact struct byte offsets, Little-Endian packing, and opcode constants.
+- **Firmware Reference**: Inspect `firmware/main/command.h`, `firmware/main/telemetry.h`, and `firmware/main/storage.h` for exact struct byte offsets, Little-Endian packing, and opcode constants.
 - **Flutter Project Scaffolding** (`mobile-app/`):
   - Initialize Flutter project with strict lint rules (`flutter_lints`, pedantic analysis options).
   - Configure Android permissions (`BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT`, `ACCESS_FINE_LOCATION`) and iOS `Info.plist` usage descriptions (`NSBluetoothAlwaysUsageDescription`).
@@ -68,7 +68,7 @@ Testing against the physical Fabrica robot follows an incremental verification p
 ---
 
 ## Phase 2 — Universal BLE Transport, Scanning, Hold-to-Pair & SMP Bonding
-- **Firmware Reference**: Inspect [`ble_transport.c`](file:///Users/intelligentmachine/workspace/fabrica/firmware/main/ble_transport.c), [`ble_transport.h`](file:///Users/intelligentmachine/workspace/fabrica/firmware/main/ble_transport.h), [`led.c`](file:///Users/intelligentmachine/workspace/fabrica/firmware/main/led.c), and [`buttons.c`](file:///Users/intelligentmachine/workspace/fabrica/firmware/main/buttons.c).
+- **Firmware Reference**: Inspect `firmware/main/ble_transport.c`, `firmware/main/ble_transport.h`, `firmware/main/led.c`, and `firmware/main/buttons.c`.
 - **Discovery & RSSI Filtering** (`lib/core/ble/ble_scanner.dart`):
   - Implement BLE scanner with prefix filtering (`Fabrica-*` and AIR Robotics ecosystem hardware).
   - Provide RSSI signal strength smoothing (rolling exponential average).
@@ -92,7 +92,7 @@ Testing against the physical Fabrica robot follows an incremental verification p
 ---
 
 ## Phase 3 — Binary Telemetry Bus & Real-Time Command Pipeline
-- **Firmware Reference**: Inspect [`telemetry.c`](file:///Users/intelligentmachine/workspace/fabrica/firmware/main/telemetry.c), [`remote_cmd.c`](file:///Users/intelligentmachine/workspace/fabrica/firmware/main/remote_cmd.c), and [`state_machine.c`](file:///Users/intelligentmachine/workspace/fabrica/firmware/main/state_machine.c).
+- **Firmware Reference**: Inspect `firmware/main/telemetry.c`, `firmware/main/remote_cmd.c`, and `firmware/main/state_machine.c`.
 - **Reactive Telemetry Stream Pipeline** (`lib/core/protocol/telemetry_bus.dart`):
   - Subscribe to `FAB2` notifications and pipe incoming raw byte arrays through `TelemetryPacket.fromBytes()`.
   - Expose stream via Riverpod `StreamProvider<TelemetryPacket>` for zero-latency UI reactivity.
@@ -110,7 +110,7 @@ Testing against the physical Fabrica robot follows an incremental verification p
 ---
 
 ## Phase 4 — Dynamic Profile Engine, JSON Schema Validator & Local Storage
-- **Firmware Reference**: Inspect [`config.h`](file:///Users/intelligentmachine/workspace/fabrica/firmware/main/config.h) for default channel bounds, servo timings, and capabilities.
+- **Firmware Reference**: Inspect `firmware/main/config.h` for default channel bounds, servo timings, and capabilities.
 - **Profile Schema & Serialization** (`lib/core/profile/`):
   - Embed `assets/profiles/air-device-profile.schema.json` and validate on-device profiles using Dart `json_schema`.
   - Implement `DeviceProfile` immutable data models with Freezed.
@@ -128,7 +128,7 @@ Testing against the physical Fabrica robot follows an incremental verification p
 ---
 
 ## Phase 5 — Dynamic SDUI Renderer & Standard Widget Catalog
-- **Firmware Reference**: Inspect [`remote_cmd.h`](file:///Users/intelligentmachine/workspace/fabrica/firmware/main/remote_cmd.h), [`led.h`](file:///Users/intelligentmachine/workspace/fabrica/firmware/main/led.h), and [`buttons.h`](file:///Users/intelligentmachine/workspace/fabrica/firmware/main/buttons.h).
+- **Firmware Reference**: Inspect `firmware/main/remote_cmd.h`, `firmware/main/led.h`, and `firmware/main/buttons.h`.
 - **Dynamic Screen & Tab Scaffold** (`lib/ui_engine/dynamic_screen_scaffold.dart`):
   - Dynamically render adaptive top bars, tab navigators, and scrollable content bodies from profile `screens` array.
 - **Standard Widget Library** (`lib/ui_engine/widget_catalog/`):
@@ -146,7 +146,7 @@ Testing against the physical Fabrica robot follows an incremental verification p
 ---
 
 ## Phase 6 — Fabrica Reference Implementation: 2D Flap Canvas, Sequencer & E2E Validation
-- **Firmware Reference**: Inspect [`motion.c`](file:///Users/intelligentmachine/workspace/fabrica/firmware/main/motion.c), [`pca9685.c`](file:///Users/intelligentmachine/workspace/fabrica/firmware/main/pca9685.c), and [`storage.c`](file:///Users/intelligentmachine/workspace/fabrica/firmware/main/storage.c).
+- **Firmware Reference**: Inspect `firmware/main/motion.c`, `firmware/main/pca9685.c`, and `firmware/main/storage.c`.
 - **Custom Canvas: Fabrica 2D Flap Visualizer** (`lib/visualizers/fabrica/`):
   - Implement `FabricaFlapGrid` using Flutter `CustomPainter`.
   - Draw Left (Ch 0), Right (Ch 1), Bottom (Ch 2), and Top (Ch 3) panels with planar perspective and realistic fold angles ($0^\circ \text{ to } 180^\circ$).
