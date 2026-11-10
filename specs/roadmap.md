@@ -50,7 +50,7 @@ Testing against the physical Fabrica robot follows an incremental verification p
 
 ---
 
-## Phase 1 — Project Skeleton, Core Theming & Protocol Models
+## Phase 1 — Project Skeleton, Core Theming & Protocol Models ✅
 - **Firmware Reference**: Inspect `firmware/main/command.h`, `firmware/main/telemetry.h`, and `firmware/main/storage.h` for exact struct byte offsets, Little-Endian packing, and opcode constants.
 - **Flutter Project Scaffolding** (`mobile-app/`):
   - Initialize Flutter project with strict lint rules (`flutter_lints`, pedantic analysis options).

@@ -1,0 +1,171 @@
+{
+  "schema_version": "1.0.0",
+  "model_number": "Fabrica-DevKit-v1",
+  "name": "Fabrica Cloth Folding Robot",
+  "description": "Articulated automated garment folder with 4 planar kinematic flaps and tactile preset slots.",
+  "manufacturer": "AIR Robotics",
+  "firmware_compatibility": {
+    "min_version": "v1.13.0"
+  },
+  "gatt": {
+    "service_uuid": "0000fab0-0000-1000-8000-00805f9b34fb",
+    "control_point_uuid": "0000fab1-0000-1000-8000-00805f9b34fb",
+    "telemetry_stream_uuid": "0000fab2-0000-1000-8000-00805f9b34fb",
+    "configuration_uuid": "0000fab3-0000-1000-8000-00805f9b34fb"
+  },
+  "capabilities": {
+    "max_channels": 4,
+    "supports_emergency_stop": true,
+    "supports_raw_preview": true,
+    "supports_flash_sync": true,
+    "supports_calibration_jog": true,
+    "telemetry_rates": {
+      "motion_hz": 10.0,
+      "idle_hz": 1.0
+    }
+  },
+  "actuators": [
+    {
+      "channel": 0,
+      "name": "Left Flap",
+      "role": "fold_left",
+      "min_limit": 0.0,
+      "max_limit": 180.0,
+      "default_angle": 0.0,
+      "inverted": false
+    },
+    {
+      "channel": 1,
+      "name": "Right Flap",
+      "role": "fold_right",
+      "min_limit": 0.0,
+      "max_limit": 180.0,
+      "default_angle": 0.0,
+      "inverted": false
+    },
+    {
+      "channel": 2,
+      "name": "Bottom Flap",
+      "role": "fold_bottom",
+      "min_limit": 0.0,
+      "max_limit": 180.0,
+      "default_angle": 0.0,
+      "inverted": false
+    },
+    {
+      "channel": 3,
+      "name": "Top Flap",
+      "role": "fold_top",
+      "min_limit": 0.0,
+      "max_limit": 180.0,
+      "default_angle": 0.0,
+      "inverted": false
+    }
+  ],
+  "presets": [
+    {
+      "id": 1,
+      "label": "Adult T-Shirt",
+      "description": "Standard adult short-sleeve t-shirt fold",
+      "icon": "tshirt"
+    },
+    {
+      "id": 2,
+      "label": "Long Sleeve",
+      "description": "Long sleeve shirt and sweater fold",
+      "icon": "sweater"
+    },
+    {
+      "id": 3,
+      "label": "Trousers",
+      "description": "Jeans, slacks and trousers dual-sweep fold",
+      "icon": "pants"
+    },
+    {
+      "id": 4,
+      "label": "Towels",
+      "description": "Bath and kitchen towels compact fold",
+      "icon": "towel"
+    }
+  ],
+  "visualizers": [
+    {
+      "id": "fabrica-flap-grid",
+      "type": "canvas_2d",
+      "options": {
+        "perspective": "planar_top_down",
+        "interactive_jog": true
+      }
+    }
+  ],
+  "screens": [
+    {
+      "id": "screen_control",
+      "title": "Control",
+      "icon": "gamepad",
+      "widgets": [
+        {
+          "type": "status-banner",
+          "title": "System Status",
+          "props": { "show_led_mirror": true, "show_rssi": true }
+        },
+        {
+          "type": "preset-grid",
+          "title": "Folding Presets",
+          "props": { "columns": 2 }
+        },
+        {
+          "type": "emergency-stop-button",
+          "title": "Emergency Stop",
+          "props": { "tactile_feedback": true }
+        }
+      ]
+    },
+    {
+      "id": "screen_sequencer",
+      "title": "Sequencer",
+      "icon": "tune",
+      "widgets": [
+        {
+          "type": "visualizer",
+          "title": "Kinematic Canvas",
+          "props": { "visualizer_id": "fabrica-flap-grid" }
+        },
+        {
+          "type": "timeline-sequencer",
+          "title": "Routine Builder",
+          "props": { "max_steps": 16, "allow_preview": true }
+        }
+      ]
+    },
+    {
+      "id": "screen_calibration",
+      "title": "Calibrate",
+      "icon": "build",
+      "widgets": [
+        {
+          "type": "jog-slider-bank",
+          "title": "Servo Manual Jog",
+          "props": { "drag_throttle_ms": 50 }
+        }
+      ]
+    },
+    {
+      "id": "screen_diagnostics",
+      "title": "Diagnostics",
+      "icon": "terminal",
+      "widgets": [
+        {
+          "type": "raw-hex-console",
+          "title": "Packet Console",
+          "props": { "buffer_size": 250 }
+        },
+        {
+          "type": "telemetry-strip-chart",
+          "title": "Trajectory Chart",
+          "props": { "window_seconds": 10 }
+        }
+      ]
+    }
+  ]
+}
