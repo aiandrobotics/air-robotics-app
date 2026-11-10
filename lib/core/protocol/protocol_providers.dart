@@ -9,17 +9,22 @@ import 'telemetry_packet.dart';
 /// Provider for the singleton reactive [TelemetryBus].
 final telemetryBusProvider = Provider<TelemetryBus>((ref) {
   final transport = ref.watch(bleTransportProvider);
-  final connStateAsync = ref.watch(bleConnectionStateProvider);
   final bus = TelemetryBus(transport: transport);
 
-  connStateAsync.whenData((state) {
-    if (state == BleConnectionState.ready) {
-      bus.start();
-    } else if (state == BleConnectionState.disconnected) {
-      bus.stop();
-      bus.resetMetrics();
-    }
-  });
+  ref.listen<AsyncValue<BleConnectionState>>(
+    bleConnectionStateProvider,
+    (previous, next) {
+      next.whenData((state) {
+        if (state == BleConnectionState.ready) {
+          bus.start();
+        } else if (state == BleConnectionState.disconnected) {
+          bus.stop();
+          bus.resetMetrics();
+        }
+      });
+    },
+    fireImmediately: true,
+  );
 
   ref.onDispose(() => bus.dispose());
   return bus;

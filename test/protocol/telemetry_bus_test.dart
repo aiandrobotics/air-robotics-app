@@ -47,6 +47,7 @@ void main() {
     setUp(() {
       mockTransport = MockBleTransport();
       bus = TelemetryBus(transport: mockTransport);
+      bus.start();
     });
 
     tearDown(() {

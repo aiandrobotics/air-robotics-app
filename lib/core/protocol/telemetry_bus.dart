@@ -63,11 +63,7 @@ class TelemetryBus {
   int? _lastSequenceCounter;
   final List<DateTime> _recentTimestamps = [];
 
-  TelemetryBus({this.transport}) {
-    if (transport != null) {
-      start();
-    }
-  }
+  TelemetryBus({this.transport});
 
   Stream<TelemetryPacket> get packetStream => _packetController.stream;
   Stream<TelemetryMetrics> get metricsStream => _metricsController.stream;
@@ -77,12 +73,16 @@ class TelemetryBus {
   /// Starts listening to the BLE transport's FAB2 characteristic notification stream.
   void start() {
     if (transport == null || _transportSub != null) return;
-    _transportSub = transport!.subscribeTelemetry().listen(
-      ingestBytes,
-      onError: (_) {
-        // Handle unexpected radio error gracefully without terminating stream
-      },
-    );
+    try {
+      _transportSub = transport!.subscribeTelemetry().listen(
+        ingestBytes,
+        onError: (_) {
+          // Handle unexpected radio error gracefully without terminating stream
+        },
+      );
+    } catch (_) {
+      // Characteristic not bound yet or radio not ready
+    }
   }
 
   /// Stops listening to transport notifications.

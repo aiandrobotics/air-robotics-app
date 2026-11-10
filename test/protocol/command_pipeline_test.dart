@@ -38,6 +38,7 @@ void main() {
     setUp(() {
       mockTransport = MockBleTransport();
       telemetryBus = TelemetryBus(transport: mockTransport);
+      telemetryBus.start();
       pipeline = CommandPipeline(
         transport: mockTransport,
         telemetryBus: telemetryBus,

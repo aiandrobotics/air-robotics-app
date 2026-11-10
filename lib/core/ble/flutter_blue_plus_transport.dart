@@ -219,7 +219,7 @@ class FlutterBluePlusTransport implements BleTransport {
   Stream<Uint8List> subscribeCharacteristic(String characteristicUuid) {
     final char = _characteristicMap[characteristicUuid.toLowerCase()];
     if (char == null) {
-      throw StateError('Characteristic $characteristicUuid not bound');
+      return const Stream<Uint8List>.empty();
     }
 
     char.setNotifyValue(true);

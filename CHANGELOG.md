@@ -1,6 +1,7 @@
 # Changelog
 
 ## 2026-11-10
+- Fixed BLE characteristic subscription to lazily attach only when connected and ready.
 - Implemented reactive TelemetryBus decoding 31-byte binary stream, computing arrival frequency, and tracking sequence drops.
 - Implemented CommandPipeline with fast-path Emergency Stop bypass (<50ms abort) and telemetry-based acknowledgment tracking.
 - Added Riverpod 3 providers for telemetry bus, latest packet stream, health metrics, and command pipeline.
