@@ -124,4 +124,12 @@ class CommandPipeline {
     final payload = CommandBuilder.buildRestoreFactoryPresets();
     await sendCommand(payload);
   }
+
+  /// Dispatches an arbitrary raw byte payload to the FAB1 control point.
+  Future<void> sendRawControlPoint(
+    Uint8List bytes, {
+    bool withoutResponse = false,
+  }) async {
+    await transport.writeControlPoint(bytes, withoutResponse: withoutResponse);
+  }
 }

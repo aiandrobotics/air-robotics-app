@@ -1,6 +1,16 @@
 # Changelog
 
 ## 2026-11-10
+- Implemented WidgetRegistry mapping declarative widget schemas to concrete Flutter UI implementations with safe fallbacks.
+- Implemented DynamicScreenScaffold dynamically rendering navigation bars and screen content directly from profile screen definitions.
+- Implemented StatusBannerWidget with real-time state machine pill, ESP32 LED pattern mirror, RSSI signal meter, and hardware fault alerts.
+- Implemented EmergencyStopWidget with tactile safety styling, fast-path <50ms writeWithoutResponse dispatch, and heavy impact haptics.
+- Implemented PresetGridWidget with one-tap execution, active slot indicators, and live step progress sweeps.
+- Implemented JogSliderBankWidget with 50ms drag throttling to protect radio bandwidth, dual degree readouts, and auto-home reset.
+- Implemented RawHexConsoleWidget engineering tool with live packet stream logging, drop rate metrics, and raw hex command injection to FAB1.
+- Implemented TelemetryStripChartWidget plotting real-time multi-channel motor trajectories using CustomPainter.
+- Enhanced application root shell to mount DynamicScreenScaffold as primary interactive view when a robot profile is active.
+- Added comprehensive unit and widget test suite for SDUI engine and all catalog widgets with 100% pass rate.
 - Implemented ProfileStorageService with offline Hive document persistence and in-memory test doubles.
 - Implemented DiagnosticProfileBuilder generating procedural 16-channel diagnostic fallback profiles.
 - Implemented ProfileResolver executing 4-tier waterfall resolution across memory, local storage, validated bundled assets, and diagnostic fallback.
