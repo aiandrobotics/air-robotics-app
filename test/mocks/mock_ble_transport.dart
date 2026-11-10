@@ -129,9 +129,24 @@ class MockBleTransport implements BleTransport {
     writtenCharacteristics.putIfAbsent(characteristicUuid, () => []).add(bytes);
   }
 
+  final Map<String, StreamController<Uint8List>> _characteristicStreamControllers = {};
+
   @override
   Stream<Uint8List> subscribeCharacteristic(String characteristicUuid) {
-    return const Stream<Uint8List>.empty();
+    final key = characteristicUuid.toLowerCase();
+    return _characteristicStreamControllers
+        .putIfAbsent(key, () => StreamController<Uint8List>.broadcast())
+        .stream;
+  }
+
+  @override
+  Stream<Uint8List> subscribeTelemetry() =>
+      subscribeCharacteristic(BleUuids.charTelemetryStream);
+
+  /// Programmatically emits characteristic notification payload for testing.
+  void emitCharacteristicData(String characteristicUuid, Uint8List data) {
+    final key = characteristicUuid.toLowerCase();
+    _characteristicStreamControllers[key]?.add(data);
   }
 
   void _updateState(BleConnectionState newState) {
@@ -144,5 +159,9 @@ class MockBleTransport implements BleTransport {
     _scanController.close();
     _isScanningController.close();
     _connectionStateController.close();
+    for (final controller in _characteristicStreamControllers.values) {
+      controller.close();
+    }
+    _characteristicStreamControllers.clear();
   }
 }

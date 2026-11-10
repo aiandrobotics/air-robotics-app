@@ -1,5 +1,7 @@
 import 'package:air_robotics_app/core/ble/ble_providers.dart';
 import 'package:air_robotics_app/core/ble/developer_debug_screen.dart';
+import 'package:air_robotics_app/core/protocol/protocol_providers.dart';
+import 'package:air_robotics_app/core/protocol/telemetry_packet.dart';
 import 'package:air_robotics_app/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,7 +21,8 @@ void main() {
       mockTransport.dispose();
     });
 
-    testWidgets('renders UI, accepts hex input, and dispatches to FAB1', (tester) async {
+    testWidgets('renders UI, accepts hex input, and dispatches to FAB1',
+        (tester) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -36,6 +39,8 @@ void main() {
       // Check header and connection state
       expect(find.text('BLE Hardware Debugger'), findsOneWidget);
       expect(find.text('DISCONNECTED'), findsOneWidget);
+      expect(find.text('QUICK ACTIONS & SAFETY'), findsOneWidget);
+      expect(find.text('LIVE TELEMETRY INSPECTOR (FAB2)'), findsOneWidget);
       expect(find.text('RAW HEX COMMAND INJECTOR (FAB1)'), findsOneWidget);
 
       // Enter hex opcode 0E (Identify)
@@ -74,7 +79,100 @@ void main() {
       expect(mockTransport.writtenControlPointPayloads.length, equals(2));
       expect(mockTransport.writtenControlPointPayloads.last, equals([0x03]));
       expect(mockTransport.writtenControlPointNoResponse.last, isTrue);
-      expect(find.textContaining('TX -> FAB1: [03] (noResp: true)'), findsOneWidget);
+      expect(find.textContaining('TX -> FAB1: [03] (noResp: true)'),
+          findsOneWidget);
+    });
+
+    testWidgets('quick action emergency stop triggers fast-path dispatch',
+        (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            bleTransportProvider.overrideWithValue(mockTransport),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.darkTheme,
+            home: const DeveloperDebugScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final eStopButton =
+          find.widgetWithText(ElevatedButton, 'EMERGENCY STOP');
+      expect(eStopButton, findsOneWidget);
+      await tester.tap(eStopButton);
+      await tester.pumpAndSettle();
+
+      // Confirms opcode 0x03 dispatched via fast-path without response
+      expect(mockTransport.writtenControlPointPayloads.length, equals(1));
+      expect(mockTransport.writtenControlPointPayloads.first, equals([0x03]));
+      expect(mockTransport.writtenControlPointNoResponse.first, isTrue);
+      expect(find.textContaining('FAST-PATH E-STOP TRIGGERED'), findsOneWidget);
+    });
+
+    testWidgets('telemetry notification updates Live Telemetry Inspector card',
+        (tester) async {
+      final container = ProviderContainer(
+        overrides: [
+          bleTransportProvider.overrideWithValue(mockTransport),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            theme: AppTheme.darkTheme,
+            home: const DeveloperDebugScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+          find.text('Awaiting telemetry notifications on FAB2...'), findsOneWidget);
+
+      // Simulate incoming telemetry packet from robot
+      final angles = List<int>.filled(16, 0);
+      angles[0] = 45;
+      angles[1] = 90;
+      angles[2] = 135;
+      angles[3] = 180;
+
+      final packet = TelemetryPacket(
+        systemState: SystemState.runningMotion,
+        ledState: LedState.running,
+        activeButtonId: 1,
+        currentStepIdx: 2,
+        totalSteps: 5,
+        stepProgressPct: 40,
+        elapsedStepTimeMs: 1200,
+        channelAngles: angles,
+        lastCmdStatus: CmdStatus.ok,
+        freeHeapKb: 195,
+        bleRssiDbm: -58,
+        errorCode: 0,
+        sequenceCounter: 42,
+      );
+
+      container.read(telemetryBusProvider).ingestBytes(packet.toBytes());
+      await tester.pump(const Duration(milliseconds: 50));
+
+      // Verify state chip and sequence counter
+      expect(find.text('RUNNING_MOTION'), findsOneWidget);
+      expect(find.textContaining('Seq: #42'), findsOneWidget);
+
+      // Verify 4-channel angles
+      expect(find.text('45°'), findsOneWidget);
+      expect(find.text('90°'), findsOneWidget);
+      expect(find.text('135°'), findsOneWidget);
+      expect(find.text('180°'), findsOneWidget);
+
+      // Verify heap and RSSI
+      expect(find.text('Heap: 195 KB'), findsOneWidget);
+      expect(find.text('RSSI: -58 dBm'), findsOneWidget);
     });
   });
 }

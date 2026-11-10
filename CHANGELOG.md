@@ -1,6 +1,11 @@
 # Changelog
 
 ## 2026-11-10
+- Implemented reactive TelemetryBus decoding 31-byte binary stream, computing arrival frequency, and tracking sequence drops.
+- Implemented CommandPipeline with fast-path Emergency Stop bypass (<50ms abort) and telemetry-based acknowledgment tracking.
+- Added Riverpod 3 providers for telemetry bus, latest packet stream, health metrics, and command pipeline.
+- Enhanced DeveloperDebugScreen with Live Telemetry Inspector card and quick-action safety command triggers.
+- Added comprehensive unit and widget tests for telemetry bus, command pipeline, and debug UI with 100% pass rate.
 - Implemented universal BleTransport interface with native FlutterBluePlusTransport and MockBleTransport test doubles.
 - Implemented BleScanner with Fabrica and AIR Robotics prefix filtering, EMA RSSI smoothing, and 120-second pairing mode tracking.
 - Implemented BleConnectionManager with deterministic lifecycle state machine, SMP bonding, 517-byte MTU exchange, and exponential backoff auto-reconnect.

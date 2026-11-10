@@ -17,6 +17,21 @@ enum SystemState {
       orElse: () => SystemState.error,
     );
   }
+
+  String get displayName {
+    switch (this) {
+      case SystemState.idle:
+        return 'IDLE';
+      case SystemState.runningMotion:
+        return 'RUNNING_MOTION';
+      case SystemState.estop:
+        return 'ESTOP';
+      case SystemState.error:
+        return 'ERROR';
+      case SystemState.calibrating:
+        return 'CALIBRATING';
+    }
+  }
 }
 
 /// Active LED pattern of the robot hardware indicator.

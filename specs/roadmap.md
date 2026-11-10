@@ -91,7 +91,7 @@ Testing against the physical Fabrica robot follows an incremental verification p
 
 ---
 
-## Phase 3 — Binary Telemetry Bus & Real-Time Command Pipeline
+## Phase 3 — Binary Telemetry Bus & Real-Time Command Pipeline ✅
 - **Firmware Reference**: Inspect `firmware/main/telemetry.c`, `firmware/main/remote_cmd.c`, and `firmware/main/state_machine.c`.
 - **Reactive Telemetry Stream Pipeline** (`lib/core/protocol/telemetry_bus.dart`):
   - Subscribe to `FAB2` notifications and pipe incoming raw byte arrays through `TelemetryPacket.fromBytes()`.
