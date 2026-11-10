@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../protocol/protocol_providers.dart';
 import '../protocol/telemetry_packet.dart';
+import '../profile/profile_providers.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_tokens.dart';
 import 'ble_providers.dart';
@@ -98,6 +99,7 @@ class _DeveloperDebugScreenState extends ConsumerState<DeveloperDebugScreen> {
     final discoveredRobotsAsync = ref.watch(discoveredRobotsProvider);
     final telemetryAsync = ref.watch(latestTelemetryProvider);
     final metricsAsync = ref.watch(telemetryMetricsProvider);
+    final activeProfile = ref.watch(activeProfileProvider);
 
     final connectionManager = ref.read(bleConnectionManagerProvider);
     final scanner = ref.read(bleScannerProvider);
@@ -180,7 +182,115 @@ class _DeveloperDebugScreenState extends ConsumerState<DeveloperDebugScreen> {
 
             const SizedBox(height: AppTokens.space12),
 
-            // 2. Discovered Robots List
+            // 2. Active Device Profile Card
+            Card(
+              child: Padding(
+                padding: AppTokens.paddingCard,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'ACTIVE DEVICE PROFILE',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.cyan,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceHighlight,
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: AppColors.border),
+                          ),
+                          child: Text(
+                            'v${activeProfile.schemaVersion}',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppTokens.space8),
+                    Row(
+                      children: [
+                        const Icon(Icons.memory,
+                            color: AppColors.cyan, size: 20),
+                        const SizedBox(width: AppTokens.space8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                activeProfile.name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              Text(
+                                '${activeProfile.manufacturer} • ${activeProfile.modelNumber}',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.cyan.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            '${activeProfile.actuators.length} Channels',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.cyan,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppTokens.space8),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        if (activeProfile.capabilities.supportsEmergencyStop)
+                          _buildCapabilityBadge('E-STOP', AppColors.crimson),
+                        if (activeProfile.capabilities.supportsRawPreview)
+                          _buildCapabilityBadge(
+                              'RAW PREVIEW', AppColors.amber),
+                        if (activeProfile.capabilities.supportsFlashSync)
+                          _buildCapabilityBadge(
+                              'FLASH SYNC', AppColors.emerald),
+                        if (activeProfile.capabilities.supportsCalibrationJog)
+                          _buildCapabilityBadge(
+                              'CALIBRATION JOG', AppColors.cyan),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: AppTokens.space12),
+
+            // 3. Discovered Robots List
             if (robots.isNotEmpty) ...[
               const Text(
                 'DISCOVERED ROBOTS',
@@ -711,6 +821,26 @@ class _DeveloperDebugScreenState extends ConsumerState<DeveloperDebugScreen> {
       default:
         return AppColors.textMuted;
     }
+  }
+
+  Widget _buildCapabilityBadge(String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 9,
+          fontWeight: FontWeight.bold,
+          color: color,
+          letterSpacing: 0.5,
+        ),
+      ),
+    );
   }
 }
 
