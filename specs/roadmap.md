@@ -145,7 +145,7 @@ Testing against the physical Fabrica robot follows an incremental verification p
 
 ---
 
-## Phase 6 — Fabrica Reference Implementation: 2D Flap Canvas, Sequencer & E2E Validation
+## Phase 6 — Fabrica Reference Implementation: 2D Flap Canvas, Sequencer & E2E Validation ✅
 - **Firmware Reference**: Inspect `firmware/main/motion.c`, `firmware/main/pca9685.c`, and `firmware/main/storage.c`.
 - **Custom Canvas: Fabrica 2D Flap Visualizer** (`lib/visualizers/fabrica/`):
   - Implement `FabricaFlapGrid` using Flutter `CustomPainter`.

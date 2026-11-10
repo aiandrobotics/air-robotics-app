@@ -1,6 +1,14 @@
 # Changelog
 
 ## 2026-11-10
+- Implemented FabricaGeometry computing 2D planar fold kinematics, elevation shadows, and touch-drag calibration mapping.
+- Implemented FabricaFlapVisualizerWidget with hardware-accelerated 60 fps CustomPainter canvas, telemetry angle interpolation, and touch-drag servo calibration.
+- Implemented TimelineSequencerWidget supporting up to 16 motion steps, single/dual flap picker, template loading, and live step deletion.
+- Added stateless sequence preview dispatch to RAM (CMD_RUN_RAW_SEQUENCE / 0x01) with 53-byte FoldRoutine payload.
+- Added NVS flash persistence (CMD_SET_BUTTON_SEQUENCE / 0x0A) with IEEE 802.3 CRC32 verification to physical Button slots 1–4.
+- Added one-tap factory garment preset restoration (CMD_RESTORE_FACTORY_PRESETS / 0x0C).
+- Connected visualizer and timeline sequencer widgets into SDUI WidgetRegistry.
+- Added comprehensive unit and widget tests for geometry, flap canvas, sequencer, and registry with 100% pass rate across 97 tests.
 - Implemented WidgetRegistry mapping declarative widget schemas to concrete Flutter UI implementations with safe fallbacks.
 - Implemented DynamicScreenScaffold dynamically rendering navigation bars and screen content directly from profile screen definitions.
 - Implemented StatusBannerWidget with real-time state machine pill, ESP32 LED pattern mirror, RSSI signal meter, and hardware fault alerts.

@@ -101,7 +101,7 @@ void main() {
       expect(find.text('Title: Mystery Gauge'), findsOneWidget);
     });
 
-    testWidgets('renders placeholder cards for Phase 6 forward compatibility',
+    testWidgets('renders live Fabrica visualizer and sequencer widgets',
         (tester) async {
       final registry = WidgetRegistry();
 
@@ -111,26 +111,28 @@ void main() {
             home: Scaffold(
               body: Consumer(
                 builder: (context, ref, _) {
-                  return Column(
-                    children: [
-                      registry.buildWidget(
-                        context,
-                        const AirWidgetConfig(
-                          type: 'visualizer',
-                          title: 'Flap Canvas',
-                          props: {'visualizer_id': 'fabrica-flap-grid'},
+                  return SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        registry.buildWidget(
+                          context,
+                          const AirWidgetConfig(
+                            type: 'visualizer',
+                            title: 'Flap Canvas',
+                            props: {'visualizer_id': 'fabrica-flap-grid'},
+                          ),
+                          ref,
                         ),
-                        ref,
-                      ),
-                      registry.buildWidget(
-                        context,
-                        const AirWidgetConfig(
-                          type: 'timeline-sequencer',
-                          title: 'Folding Timeline',
+                        registry.buildWidget(
+                          context,
+                          const AirWidgetConfig(
+                            type: 'timeline-sequencer',
+                            title: 'Folding Timeline',
+                          ),
+                          ref,
                         ),
-                        ref,
-                      ),
-                    ],
+                      ],
+                    ),
                   );
                 },
               ),
@@ -138,13 +140,12 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
-      expect(find.text('Flap Canvas'), findsOneWidget);
-      expect(find.text('Visualizer: fabrica-flap-grid'), findsOneWidget);
-      expect(find.text('Folding Timeline'), findsOneWidget);
-      expect(
-          find.text('Multi-Step Timeline Sequencer & Flash Sync (Phase 6)'),
-          findsOneWidget);
+      expect(find.text('FLAP CANVAS'), findsOneWidget);
+      expect(find.text('FOLDING TIMELINE'), findsOneWidget);
+      expect(find.text('LIVE 60 FPS'), findsOneWidget);
+      expect(find.text('PREVIEW ON ROBOT'), findsOneWidget);
     });
   });
 }
