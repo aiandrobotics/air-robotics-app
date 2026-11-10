@@ -1,6 +1,12 @@
 # Changelog
 
 ## 2026-11-10
+- Implemented ProfileStorageService with offline Hive document persistence and in-memory test doubles.
+- Implemented DiagnosticProfileBuilder generating procedural 16-channel diagnostic fallback profiles.
+- Implemented ProfileResolver executing 4-tier waterfall resolution across memory, local storage, validated bundled assets, and diagnostic fallback.
+- Added Riverpod activeProfileProvider with automatic binding upon BLE DIS model number discovery.
+- Enhanced DeveloperDebugScreen with Active Device Profile card displaying schema version, channel count, and safety capability badges.
+- Added comprehensive unit and integration tests for profile storage, waterfall resolution, and dynamic BLE binding with 100% pass rate.
 - Fixed BLE characteristic subscription to lazily attach only when connected and ready.
 - Implemented reactive TelemetryBus decoding 31-byte binary stream, computing arrival frequency, and tracking sequence drops.
 - Implemented CommandPipeline with fast-path Emergency Stop bypass (<50ms abort) and telemetry-based acknowledgment tracking.

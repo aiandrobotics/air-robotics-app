@@ -39,6 +39,7 @@ void main() {
       // Check header and connection state
       expect(find.text('BLE Hardware Debugger'), findsOneWidget);
       expect(find.text('DISCONNECTED'), findsOneWidget);
+      expect(find.text('ACTIVE DEVICE PROFILE'), findsOneWidget);
       expect(find.text('QUICK ACTIONS & SAFETY'), findsOneWidget);
       expect(find.text('LIVE TELEMETRY INSPECTOR (FAB2)'), findsOneWidget);
       expect(find.text('RAW HEX COMMAND INJECTOR (FAB1)'), findsOneWidget);
@@ -46,12 +47,14 @@ void main() {
       // Enter hex opcode 0E (Identify)
       final textField = find.byType(TextField);
       expect(textField, findsOneWidget);
+      await tester.ensureVisible(textField);
       await tester.enterText(textField, '0E');
       await tester.pump();
 
       // Tap SEND button
       final sendButton = find.widgetWithText(ElevatedButton, 'SEND');
       expect(sendButton, findsOneWidget);
+      await tester.ensureVisible(sendButton);
       await tester.tap(sendButton);
       await tester.pumpAndSettle();
 
@@ -66,12 +69,15 @@ void main() {
       // Check Write Without Response checkbox
       final checkbox = find.byType(Checkbox);
       expect(checkbox, findsOneWidget);
+      await tester.ensureVisible(checkbox);
       await tester.tap(checkbox);
       await tester.pump();
 
       // Enter E-Stop opcode 03
+      await tester.ensureVisible(textField);
       await tester.enterText(textField, '03');
       await tester.pump();
+      await tester.ensureVisible(sendButton);
       await tester.tap(sendButton);
       await tester.pumpAndSettle();
 
@@ -101,6 +107,7 @@ void main() {
       final eStopButton =
           find.widgetWithText(ElevatedButton, 'EMERGENCY STOP');
       expect(eStopButton, findsOneWidget);
+      await tester.ensureVisible(eStopButton);
       await tester.tap(eStopButton);
       await tester.pumpAndSettle();
 

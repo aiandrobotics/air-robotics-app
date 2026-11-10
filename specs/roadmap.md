@@ -109,15 +109,15 @@ Testing against the physical Fabrica robot follows an incremental verification p
 
 ---
 
-## Phase 4 — Dynamic Profile Engine, JSON Schema Validator & Local Storage
+## Phase 4 — Dynamic Profile Engine, JSON Schema Validator & Local Storage ✅
 - **Firmware Reference**: Inspect `firmware/main/config.h` for default channel bounds, servo timings, and capabilities.
 - **Profile Schema & Serialization** (`lib/core/profile/`):
   - Embed `assets/profiles/air-device-profile.schema.json` and validate on-device profiles using Dart `json_schema`.
-  - Implement `DeviceProfile` immutable data models with Freezed.
+  - Implement `DeviceProfile` immutable data models with Freezed/JSON serialization.
   - Model capabilities (channel counts, limits, E-Stop support), command dictionaries, telemetry layouts, and screen descriptors.
-- **On-Device Profile Resolution Hierarchy** (`lib/core/profile/profile_registry.dart`):
+- **On-Device Profile Resolution Hierarchy** (`lib/core/profile/profile_resolver.dart`):
   - Tier 1: In-memory compiled profile cache.
-  - Tier 2: Local Hive document storage (persisting user-modified sequence assignments and calibration settings).
+  - Tier 2: Local Hive document storage (persisting user overrides and calibration settings).
   - Tier 3: Pre-packaged asset bundles (`assets/profiles/fabrica-devkit-v1.json`).
   - Tier 4: Generic diagnostic fallback profile for unrecognized robot models.
 - **Hardware Validation with Fabrica**:

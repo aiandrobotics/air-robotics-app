@@ -96,10 +96,12 @@ class MockBleTransport implements BleTransport {
     return true;
   }
 
+  String mockModelNumber = 'Fabrica-DevKit-v1';
+
   @override
   Future<BleGattInfo> discoverServices() async {
     return BleGattInfo(
-      modelNumber: 'Fabrica-DevKit-v1',
+      modelNumber: mockModelNumber,
       firmwareRevision: 'v1.13.0',
       manufacturer: 'AIR Robotics',
       hasControlPoint: true,
