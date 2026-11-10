@@ -67,7 +67,7 @@ Testing against the physical Fabrica robot follows an incremental verification p
 
 ---
 
-## Phase 2 — Universal BLE Transport, Scanning, Hold-to-Pair & SMP Bonding
+## Phase 2 — Universal BLE Transport, Scanning, Hold-to-Pair & SMP Bonding ✅
 - **Firmware Reference**: Inspect `firmware/main/ble_transport.c`, `firmware/main/ble_transport.h`, `firmware/main/led.c`, and `firmware/main/buttons.c`.
 - **Discovery & RSSI Filtering** (`lib/core/ble/ble_scanner.dart`):
   - Implement BLE scanner with prefix filtering (`Fabrica-*` and AIR Robotics ecosystem hardware).
