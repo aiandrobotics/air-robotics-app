@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/ble/developer_debug_screen.dart';
 import 'core/theme/app_colors.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/app_tokens.dart';
@@ -50,12 +51,11 @@ class AirDashboardScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.bluetooth_searching),
-            tooltip: 'BLE Scanner (Phase 2)',
+            tooltip: 'BLE Hardware Debugger',
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('BLE Scanner will be connected in Phase 2'),
-                  duration: Duration(seconds: 2),
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (context) => const DeveloperDebugScreen(),
                 ),
               );
             },
