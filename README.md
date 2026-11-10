@@ -202,7 +202,7 @@ air-robotics-app/
 - [x] **Phase 0 — Project Constitution & Mobile Specs**: Architecture specifications, protocol definitions, and Fabrica reference profile mapping.
 - [x] **Phase 1 — Project Skeleton, Core Theming & Protocol Models**: Flutter scaffolding, high-contrast dark theme, zero-allocation 31-byte telemetry decoder, and CRC32 engine.
 - [x] **Phase 2 — Universal BLE Transport, Scanning, Hold-to-Pair & SMP Bonding**: Bluetooth scanning, RSSI smoothing, 120s pairing window gating, LE Secure Connections bonding, RPA auto-reconnect, and MTU 517B exchange.
-- [ ] **Phase 3 — Binary Telemetry Bus & Real-Time Command Pipeline**: Reactive `StreamProvider` telemetry bus, drop detection, command dispatcher, and $<50\text{ ms}$ fast-path E-Stop.
+- [x] **Phase 3 — Binary Telemetry Bus & Real-Time Command Pipeline**: Reactive `StreamProvider` telemetry bus, drop detection, command dispatcher, and $<50\text{ ms}$ fast-path E-Stop.
 - [ ] **Phase 4 — Dynamic Profile Engine, JSON Schema Validator & Local Storage**: JSON Schema validator, Hive profile caching, offline storage, and generic diagnostic fallback.
 - [ ] **Phase 5 — Dynamic SDUI Renderer & Standard Widget Catalog**: Profile-driven dynamic screen scaffold, status banner, jog slider bank, preset grid, and raw hex console.
 - [ ] **Phase 6 — Fabrica Reference Implementation: 2D Flap Canvas, Sequencer & E2E Validation**: Interactive 60 fps `CustomPainter` flap grid, timeline folding sequencer, NVS flash commit, and physical ESP32 hardware validation.

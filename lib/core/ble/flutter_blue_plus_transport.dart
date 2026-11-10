@@ -226,6 +226,10 @@ class FlutterBluePlusTransport implements BleTransport {
     return char.onValueReceived.map((list) => Uint8List.fromList(list));
   }
 
+  @override
+  Stream<Uint8List> subscribeTelemetry() =>
+      subscribeCharacteristic(BleUuids.charTelemetryStream);
+
   void _onNativeScanResults(List<ScanResult> results) {
     final now = DateTime.now();
     final list = <DiscoveredRobot>[];

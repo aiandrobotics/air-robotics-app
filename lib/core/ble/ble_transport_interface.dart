@@ -157,5 +157,9 @@ abstract class BleTransport {
 
   Stream<Uint8List> subscribeCharacteristic(String characteristicUuid);
 
+  /// Subscribes to the primary FAB2 telemetry notification stream.
+  Stream<Uint8List> subscribeTelemetry() =>
+      subscribeCharacteristic(BleUuids.charTelemetryStream);
+
   void dispose();
 }
