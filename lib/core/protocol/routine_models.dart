@@ -96,6 +96,9 @@ class FoldRoutine {
     required this.checksum,
   });
 
+  /// Constructs a [FoldRoutine] from [steps]. Alias for [FoldRoutine.create].
+  factory FoldRoutine.fromSteps(List<FoldStep> steps) => FoldRoutine.create(steps);
+
   /// Constructs a [FoldRoutine] and auto-calculates the CRC32 checksum across
   /// the 49-byte payload (`step_count` + 48 step bytes).
   factory FoldRoutine.create(List<FoldStep> activeSteps) {

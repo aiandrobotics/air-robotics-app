@@ -10,6 +10,8 @@ import 'widget_catalog/preset_grid_widget.dart';
 import 'widget_catalog/raw_hex_console_widget.dart';
 import 'widget_catalog/status_banner_widget.dart';
 import 'widget_catalog/telemetry_strip_chart_widget.dart';
+import 'widget_catalog/timeline_sequencer_widget.dart';
+import '../visualizers/fabrica/fabrica_flap_canvas.dart';
 
 /// Signature for a dynamic SDUI widget builder function.
 typedef SduiWidgetBuilder = Widget Function(
@@ -71,116 +73,12 @@ class WidgetRegistry {
       return TelemetryStripChartWidget(config: config);
     });
 
-    // Phase 6 forward compatibility placeholders
     register('visualizer', (context, config, ref) {
-      final visualizerId = config.props['visualizer_id'] as String? ?? 'default';
-      return Card(
-        child: Padding(
-          padding: AppTokens.paddingCard,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.view_in_ar, color: AppColors.cyan),
-                  const SizedBox(width: AppTokens.space8),
-                  Text(
-                    config.title.isNotEmpty ? config.title : 'Kinematic Visualizer',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppTokens.space8),
-              Container(
-                height: 140,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceHighlight,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.motion_photos_on,
-                          size: 36, color: AppColors.cyan),
-                      const SizedBox(height: AppTokens.space8),
-                      Text(
-                        'Visualizer: $visualizerId',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: AppTokens.space4),
-                      const Text(
-                        'Interactive 2D Flap Canvas (Phase 6)',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.amber,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
+      return FabricaFlapVisualizerWidget(config: config);
     });
 
     register('timeline-sequencer', (context, config, ref) {
-      return Card(
-        child: Padding(
-          padding: AppTokens.paddingCard,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.tune, color: AppColors.cyan),
-                  const SizedBox(width: AppTokens.space8),
-                  Text(
-                    config.title.isNotEmpty ? config.title : 'Sequence Editor',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppTokens.space8),
-              Container(
-                height: 100,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceHighlight,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.movie_creation_outlined,
-                          size: 28, color: AppColors.textMuted),
-                      SizedBox(height: AppTokens.space4),
-                      Text(
-                        'Multi-Step Timeline Sequencer & Flash Sync (Phase 6)',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.amber,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
+      return TimelineSequencerWidget(config: config);
     });
   }
 

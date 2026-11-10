@@ -89,6 +89,20 @@ class CommandPipeline {
     await sendCommand(payload);
   }
 
+  /// Commits a folding routine into persistent NVS flash assigned to physical button [presetId] (1 to 4).
+  Future<void> setButtonSequence(
+    int presetId,
+    FoldRoutine routine, {
+    bool compact = false,
+  }) async {
+    final payload = CommandBuilder.buildSetButtonSequence(
+      presetId,
+      routine,
+      compact: compact,
+    );
+    await sendCommand(payload);
+  }
+
   /// Cleanly stops active motion or exits calibration mode.
   Future<void> stopSequence() async {
     final payload = CommandBuilder.buildStopSequence();
