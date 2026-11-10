@@ -516,13 +516,15 @@ class _DeveloperDebugScreenState extends ConsumerState<DeveloperDebugScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'LIVE TELEMETRY INSPECTOR (FAB2)',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.cyan,
-                            letterSpacing: 0.8,
+                        const Flexible(
+                          child: Text(
+                            'LIVE TELEMETRY INSPECTOR (FAB2)',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.cyan,
+                              letterSpacing: 0.8,
+                            ),
                           ),
                         ),
                         Container(
@@ -725,11 +727,13 @@ class _DeveloperDebugScreenState extends ConsumerState<DeveloperDebugScreen> {
                             });
                           },
                         ),
-                        const Text(
-                          'Write Without Response (Fast-Path <50ms)',
-                          style: TextStyle(
-                              fontSize: 11,
-                              color: AppColors.textSecondary),
+                        const Expanded(
+                          child: Text(
+                            'Write Without Response (Fast-Path <50ms)',
+                            style: TextStyle(
+                                fontSize: 11,
+                                color: AppColors.textSecondary),
+                          ),
                         ),
                       ],
                     ),

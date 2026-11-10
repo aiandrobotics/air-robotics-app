@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/ble/ble_providers.dart';
+import 'core/ble/ble_transport_interface.dart';
 import 'core/ble/developer_debug_screen.dart';
 import 'core/theme/app_colors.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/app_tokens.dart';
+import 'ui_engine/dynamic_screen_scaffold.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,8 +24,26 @@ class AirRoboticsApp extends StatelessWidget {
       title: 'AIR Robotics',
       theme: AppTheme.darkTheme,
       debugShowCheckedModeBanner: false,
-      home: const AirDashboardScreen(),
+      home: const AppHomeShell(),
     );
+  }
+}
+
+/// Root shell dynamically switching between landing onboarding
+/// and dynamic robot profile interface upon connection.
+class AppHomeShell extends ConsumerWidget {
+  const AppHomeShell({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final connStateAsync = ref.watch(bleConnectionStateProvider);
+    final connState = connStateAsync.value ??
+        ref.read(bleConnectionManagerProvider).currentState;
+
+    if (connState == BleConnectionState.ready) {
+      return const DynamicScreenScaffold();
+    }
+    return const AirDashboardScreen();
   }
 }
 
@@ -49,6 +70,17 @@ class AirDashboardScreen extends StatelessWidget {
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.dashboard_customize),
+            tooltip: 'Dynamic Profile UI',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (context) => const DynamicScreenScaffold(),
+                ),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.bluetooth_searching),
             tooltip: 'BLE Hardware Debugger',
