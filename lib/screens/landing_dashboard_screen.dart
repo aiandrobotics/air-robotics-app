@@ -61,6 +61,13 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
   }
 
   void _startContinuousAutoScan() {
+    final connState = ref.read(bleConnectionManagerProvider).currentState;
+    if (connState == BleConnectionState.ready ||
+        connState == BleConnectionState.connecting ||
+        connState == BleConnectionState.connected ||
+        connState == BleConnectionState.discovering) {
+      return;
+    }
     final scanner = ref.read(bleScannerProvider);
     scanner.startScan(timeout: const Duration(seconds: 60));
   }
@@ -71,30 +78,30 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
     if (manager.isManualDisconnect) return;
     if (_isAutoConnecting) return;
 
-    final registeredList = ref.read(registeredRobotsProvider).value ?? [];
-    if (registeredList.isEmpty) return;
+    _isAutoConnecting = true;
+    try {
+      final registeredList = ref.read(registeredRobotsProvider).value ?? [];
+      if (registeredList.isEmpty) return;
 
-    final registeredMap = {for (var r in registeredList) r.id: r};
-    final lastId = await ref.read(fleetStorageProvider).getLastConnectedRobotId();
+      final registeredMap = {for (var r in registeredList) r.id: r};
+      final lastId = await ref.read(fleetStorageProvider).getLastConnectedRobotId();
 
-    DiscoveredRobot? candidate;
-    if (lastId != null) {
-      candidate = discoveredList.where((d) => d.id == lastId).firstOrNull;
-    }
-    candidate ??= discoveredList.where((d) => registeredMap.containsKey(d.id)).firstOrNull;
+      DiscoveredRobot? candidate;
+      if (lastId != null) {
+        candidate = discoveredList.where((d) => d.id == lastId).firstOrNull;
+      }
+      candidate ??= discoveredList.where((d) => registeredMap.containsKey(d.id)).firstOrNull;
 
-    if (candidate != null && mounted) {
-      _isAutoConnecting = true;
-      try {
+      if (candidate != null && mounted) {
         await manager.connect(candidate);
         await ref.read(fleetStorageProvider).setLastConnectedRobotId(candidate.id);
         ref.read(isViewingDeviceProvider.notifier).openDevice();
-      } catch (_) {
-        // Silently ignore; will retry on next advertisement
-      } finally {
-        if (mounted) {
-          setState(() => _isAutoConnecting = false);
-        }
+      }
+    } catch (_) {
+      // Silently ignore; will retry on next advertisement
+    } finally {
+      if (mounted) {
+        setState(() => _isAutoConnecting = false);
       }
     }
   }

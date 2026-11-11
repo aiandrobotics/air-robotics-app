@@ -34,20 +34,42 @@ class HiveProfileStorageService implements ProfileStorageService {
 
   @override
   Future<void> init() async {
-    _profileBox ??= await Hive.openBox<String>(profileBoxName);
-    _calibrationBox ??= await Hive.openBox<String>(calibrationBoxName);
+    await _getProfileBox();
+    await _getCalibrationBox();
+  }
+
+  Future<Box<String>?> _getProfileBox() async {
+    if (_profileBox != null && _profileBox!.isOpen) return _profileBox;
+    try {
+      _profileBox = await Hive.openBox<String>(profileBoxName);
+      return _profileBox;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<Box<String>?> _getCalibrationBox() async {
+    if (_calibrationBox != null && _calibrationBox!.isOpen) return _calibrationBox;
+    try {
+      _calibrationBox = await Hive.openBox<String>(calibrationBoxName);
+      return _calibrationBox;
+    } catch (_) {
+      return null;
+    }
   }
 
   @override
   Future<void> saveProfile(DeviceProfile profile) async {
-    final box = _profileBox ?? await Hive.openBox<String>(profileBoxName);
+    final box = await _getProfileBox();
+    if (box == null) return;
     final jsonStr = jsonEncode(profile.toJson());
     await box.put(profile.modelNumber, jsonStr);
   }
 
   @override
   Future<DeviceProfile?> getProfile(String modelNumber) async {
-    final box = _profileBox ?? await Hive.openBox<String>(profileBoxName);
+    final box = await _getProfileBox();
+    if (box == null) return null;
     final jsonStr = box.get(modelNumber);
     if (jsonStr == null) return null;
 
@@ -61,13 +83,15 @@ class HiveProfileStorageService implements ProfileStorageService {
 
   @override
   Future<void> deleteProfile(String modelNumber) async {
-    final box = _profileBox ?? await Hive.openBox<String>(profileBoxName);
+    final box = await _getProfileBox();
+    if (box == null) return;
     await box.delete(modelNumber);
   }
 
   @override
   Future<List<String>> listStoredModels() async {
-    final box = _profileBox ?? await Hive.openBox<String>(profileBoxName);
+    final box = await _getProfileBox();
+    if (box == null) return [];
     return box.keys.map((k) => k.toString()).toList();
   }
 
@@ -76,16 +100,16 @@ class HiveProfileStorageService implements ProfileStorageService {
     String modelNumber,
     Map<int, int> channelOffsets,
   ) async {
-    final box =
-        _calibrationBox ?? await Hive.openBox<String>(calibrationBoxName);
+    final box = await _getCalibrationBox();
+    if (box == null) return;
     final mapped = channelOffsets.map((k, v) => MapEntry(k.toString(), v));
     await box.put(modelNumber, jsonEncode(mapped));
   }
 
   @override
   Future<Map<int, int>?> getCalibration(String modelNumber) async {
-    final box =
-        _calibrationBox ?? await Hive.openBox<String>(calibrationBoxName);
+    final box = await _getCalibrationBox();
+    if (box == null) return null;
     final jsonStr = box.get(modelNumber);
     if (jsonStr == null) return null;
 

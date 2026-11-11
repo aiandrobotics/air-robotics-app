@@ -45,6 +45,13 @@ class BleConnectionManager {
   /// Connects to [robot], requests 517B MTU, establishes SMP bonding,
   /// discovers GATT services, and enters [BleConnectionState.ready].
   Future<void> connect(DiscoveredRobot robot) async {
+    if (_state == BleConnectionState.connecting ||
+        _state == BleConnectionState.connected ||
+        _state == BleConnectionState.discovering ||
+        _state == BleConnectionState.bonding ||
+        _state == BleConnectionState.ready) {
+      return;
+    }
     _manualDisconnect = false;
     _reconnectTimer?.cancel();
     _reconnectAttempts = 0;

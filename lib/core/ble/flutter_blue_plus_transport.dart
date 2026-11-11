@@ -46,7 +46,9 @@ class FlutterBluePlusTransport implements BleTransport {
     Duration timeout = const Duration(seconds: 15),
     List<String> namePrefixes = const ['Fabrica-', 'AIR-'],
   }) async {
-    _updateConnectionState(BleConnectionState.scanning);
+    if (_connectionState == BleConnectionState.disconnected) {
+      _updateConnectionState(BleConnectionState.scanning);
+    }
 
     await FlutterBluePlus.startScan(
       timeout: timeout,

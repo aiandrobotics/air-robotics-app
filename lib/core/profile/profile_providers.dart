@@ -44,6 +44,17 @@ class ActiveProfileNotifier extends Notifier<DeviceProfile> {
     );
 
     // Initial default profile
+    final manager = ref.read(bleConnectionManagerProvider);
+    final currentModel = manager.gattInfo?.modelNumber;
+    if (manager.currentState == BleConnectionState.ready &&
+        currentModel != null &&
+        currentModel.isNotEmpty) {
+      Future.microtask(() async {
+        final resolved = await resolver.resolveProfile(currentModel);
+        state = resolved;
+      });
+    }
+
     return DiagnosticProfileBuilder.build('AIR-Generic');
   }
 

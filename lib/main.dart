@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 import 'core/ble/ble_providers.dart';
 import 'core/ble/ble_transport_interface.dart';
@@ -7,8 +8,9 @@ import 'core/theme/app_theme.dart';
 import 'screens/landing_dashboard_screen.dart';
 import 'ui_engine/dynamic_screen_scaffold.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Hive.initFlutter();
   runApp(const ProviderScope(child: AirRoboticsApp()));
 }
 

@@ -2,6 +2,8 @@ import 'package:air_robotics_app/core/ble/ble_providers.dart';
 import 'package:air_robotics_app/core/ble/ble_transport_interface.dart';
 import 'package:air_robotics_app/core/fleet/fleet_providers.dart';
 import 'package:air_robotics_app/core/fleet/fleet_storage_service.dart';
+import 'package:air_robotics_app/core/profile/profile_providers.dart';
+import 'package:air_robotics_app/core/profile/profile_storage_service.dart';
 import 'package:air_robotics_app/main.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,12 +14,14 @@ void main() {
   testWidgets('AirRoboticsApp initial dashboard renders', (WidgetTester tester) async {
     final mockTransport = MockBleTransport();
     final mockFleetStorage = InMemoryFleetStorageService();
+    final mockProfileStorage = InMemoryProfileStorageService();
 
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           bleTransportProvider.overrideWithValue(mockTransport),
           fleetStorageProvider.overrideWithValue(mockFleetStorage),
+          profileStorageProvider.overrideWithValue(mockProfileStorage),
         ],
         child: const AirRoboticsApp(),
       ),
@@ -32,17 +36,20 @@ void main() {
 
     mockTransport.dispose();
     mockFleetStorage.close();
+    mockProfileStorage.close();
   });
 
   testWidgets('back button returns from device screen to home page and allows reopening', (WidgetTester tester) async {
     final mockTransport = MockBleTransport();
     final mockFleetStorage = InMemoryFleetStorageService();
+    final mockProfileStorage = InMemoryProfileStorageService();
 
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           bleTransportProvider.overrideWithValue(mockTransport),
           fleetStorageProvider.overrideWithValue(mockFleetStorage),
+          profileStorageProvider.overrideWithValue(mockProfileStorage),
         ],
         child: const AirRoboticsApp(),
       ),
@@ -96,5 +103,6 @@ void main() {
 
     mockTransport.dispose();
     mockFleetStorage.close();
+    mockProfileStorage.close();
   });
 }
