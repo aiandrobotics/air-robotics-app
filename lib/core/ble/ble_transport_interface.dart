@@ -143,6 +143,9 @@ abstract class BleTransport {
 
   Future<bool> createBond();
 
+  /// Attempts to remove the operating-system-level bond for [deviceId].
+  Future<void> removeBond(String deviceId);
+
   Future<BleGattInfo> discoverServices();
 
   Future<void> writeControlPoint(Uint8List bytes, {bool withoutResponse = false});

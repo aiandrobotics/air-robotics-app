@@ -96,6 +96,9 @@ class MockBleTransport implements BleTransport {
     return true;
   }
 
+  @override
+  Future<void> removeBond(String deviceId) async {}
+
   String mockModelNumber = 'Fabrica-DevKit-v1';
 
   @override

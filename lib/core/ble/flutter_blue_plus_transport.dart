@@ -119,6 +119,14 @@ class FlutterBluePlusTransport implements BleTransport {
   }
 
   @override
+  Future<void> removeBond(String deviceId) async {
+    try {
+      final device = BluetoothDevice.fromId(deviceId);
+      await device.removeBond();
+    } catch (_) {}
+  }
+
+  @override
   Future<BleGattInfo> discoverServices() async {
     if (_activeDevice == null) {
       throw StateError('Cannot discover services: no active device');

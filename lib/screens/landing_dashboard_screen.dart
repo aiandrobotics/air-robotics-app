@@ -282,9 +282,19 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
               backgroundColor: AppColors.crimson,
               foregroundColor: Colors.white,
             ),
-            onPressed: () {
+            onPressed: () async {
+              final manager = ref.read(bleConnectionManagerProvider);
+              if (manager.connectedRobot?.id == robot.id ||
+                  manager.currentState != BleConnectionState.disconnected) {
+                await manager.disconnect();
+              }
+              try {
+                await ref.read(bleTransportProvider).removeBond(robot.id);
+              } catch (_) {}
               ref.read(registeredRobotsProvider.notifier).removeRobot(robot.id);
-              Navigator.of(context).pop();
+              if (context.mounted) {
+                Navigator.of(context).pop();
+              }
             },
             child: const Text('UNPAIR'),
           ),
