@@ -104,5 +104,58 @@ void main() {
 
       expect(find.byType(DeveloperDebugScreen), findsOneWidget);
     });
+
+    testWidgets('back button updates isViewingDevice to false', (tester) async {
+      tester.view.physicalSize = const Size(800, 1400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final schemaStr =
+          File('assets/profiles/air-device-profile.schema.json')
+              .readAsStringSync();
+      final profileStr =
+          File('assets/profiles/fabrica-devkit-v1.json').readAsStringSync();
+
+      final profile = ProfileValidator.validateStrings(
+        schemaString: schemaStr,
+        profileString: profileStr,
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          bleTransportProvider.overrideWithValue(mockTransport),
+          commandPipelineProvider.overrideWithValue(
+            CommandPipeline(transport: mockTransport),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      container.read(activeProfileProvider.notifier).selectProfile(profile);
+      container.read(isViewingDeviceProvider.notifier).openDevice();
+      expect(container.read(isViewingDeviceProvider), isTrue);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: DynamicScreenScaffold(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Find back button
+      final backButton = find.byTooltip('Back to Home');
+      expect(backButton, findsOneWidget);
+
+      await tester.tap(backButton);
+      await tester.pumpAndSettle();
+
+      expect(container.read(isViewingDeviceProvider), isFalse);
+    });
   });
 }

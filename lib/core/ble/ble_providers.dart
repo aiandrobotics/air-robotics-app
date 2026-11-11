@@ -64,3 +64,26 @@ final selectedRobotProvider =
     NotifierProvider<SelectedRobotNotifier, DiscoveredRobot?>(
   SelectedRobotNotifier.new,
 );
+
+/// Notifier managing whether the user is actively viewing the connected device profile
+/// or navigating the home dashboard.
+class ViewingDeviceNotifier extends Notifier<bool> {
+  @override
+  bool build() {
+    ref.listen<AsyncValue<BleConnectionState>>(bleConnectionStateProvider, (prev, next) {
+      if (next.value == BleConnectionState.ready) {
+        state = true;
+      } else if (next.value == BleConnectionState.disconnected) {
+        state = false;
+      }
+    });
+    return false;
+  }
+
+  void openDevice() => state = true;
+  void closeDevice() => state = false;
+}
+
+final isViewingDeviceProvider =
+    NotifierProvider<ViewingDeviceNotifier, bool>(ViewingDeviceNotifier.new);
+

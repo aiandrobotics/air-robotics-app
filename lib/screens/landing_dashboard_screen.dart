@@ -109,6 +109,7 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
         pairedAt: DateTime.now(),
       );
       await ref.read(registeredRobotsProvider.notifier).addRobot(registered);
+      ref.read(isViewingDeviceProvider.notifier).openDevice();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -139,6 +140,7 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
             lastSeen: DateTime.now(),
           );
       await manager.connect(candidate);
+      ref.read(isViewingDeviceProvider.notifier).openDevice();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -588,7 +590,12 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
     required DiscoveredRobot? liveMatch,
     required bool isConnecting,
   }) {
-    final isInRange = liveMatch != null;
+    final manager = ref.read(bleConnectionManagerProvider);
+    final connStateAsync = ref.watch(bleConnectionStateProvider);
+    final connState = connStateAsync.value ?? manager.currentState;
+    final isConnected = connState == BleConnectionState.ready &&
+        manager.connectedRobot?.id == robot.id;
+    final isInRange = liveMatch != null || isConnected;
     final rssi = liveMatch?.smoothedRssi;
 
     return Container(
@@ -596,9 +603,11 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
         color: AppColors.surface,
         borderRadius: AppTokens.borderRadiusMd,
         border: Border.all(
-          color: isInRange
-              ? AppColors.emerald.withValues(alpha: 0.5)
-              : AppColors.border,
+          color: isConnected
+              ? AppColors.emerald.withValues(alpha: 0.8)
+              : (isInRange
+                  ? AppColors.emerald.withValues(alpha: 0.5)
+                  : AppColors.border),
         ),
       ),
       child: Padding(
@@ -609,18 +618,24 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: isInRange
-                    ? AppColors.emerald.withValues(alpha: 0.15)
-                    : AppColors.surfaceHighlight,
+                color: isConnected
+                    ? AppColors.emerald.withValues(alpha: 0.25)
+                    : (isInRange
+                        ? AppColors.emerald.withValues(alpha: 0.15)
+                        : AppColors.surfaceHighlight),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: isInRange ? AppColors.emerald : AppColors.border,
+                  color: isConnected || isInRange
+                      ? AppColors.emerald
+                      : AppColors.border,
                 ),
               ),
               child: Icon(
                 Icons.precision_manufacturing,
                 size: 22,
-                color: isInRange ? AppColors.emerald : AppColors.textSecondary,
+                color: isConnected || isInRange
+                    ? AppColors.emerald
+                    : AppColors.textSecondary,
               ),
             ),
             const SizedBox(width: AppTokens.space12),
@@ -648,17 +663,25 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
                           vertical: 1.5,
                         ),
                         decoration: BoxDecoration(
-                          color: isInRange
-                              ? AppColors.emerald.withValues(alpha: 0.2)
-                              : AppColors.surfaceHighlight,
+                          color: isConnected
+                              ? AppColors.emerald.withValues(alpha: 0.25)
+                              : (isInRange
+                                  ? AppColors.emerald.withValues(alpha: 0.2)
+                                  : AppColors.surfaceHighlight),
                           borderRadius: BorderRadius.circular(3),
+                          border: isConnected
+                              ? Border.all(
+                                  color: AppColors.emerald.withValues(alpha: 0.7))
+                              : null,
                         ),
                         child: Text(
-                          isInRange ? 'IN RANGE' : 'OFFLINE',
+                          isConnected
+                              ? 'CONNECTED'
+                              : (isInRange ? 'IN RANGE' : 'OFFLINE'),
                           style: TextStyle(
                             fontSize: 8,
                             fontWeight: FontWeight.bold,
-                            color: isInRange
+                            color: isConnected || isInRange
                                 ? AppColors.emerald
                                 : AppColors.textMuted,
                           ),
@@ -686,44 +709,80 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
               ),
             ),
             const SizedBox(width: AppTokens.space8),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isInRange ? AppColors.cyan : AppColors.surfaceHighlight,
-                foregroundColor: isInRange ? Colors.black : AppColors.textSecondary,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                shape: RoundedRectangleBorder(
-                  borderRadius: AppTokens.borderRadiusSm,
+            if (isConnected)
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.emerald,
+                  foregroundColor: Colors.black,
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: AppTokens.borderRadiusSm,
+                  ),
                 ),
+                icon: const Icon(Icons.tune, size: 14),
+                label: const Text(
+                  'OPEN',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                onPressed: () {
+                  ref.read(isViewingDeviceProvider.notifier).openDevice();
+                },
+              )
+            else
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isInRange ? AppColors.cyan : AppColors.surfaceHighlight,
+                  foregroundColor: isInRange ? Colors.black : AppColors.textSecondary,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: AppTokens.borderRadiusSm,
+                  ),
+                ),
+                onPressed: isConnecting ? null : () => _connectToRegisteredRobot(robot, liveMatch),
+                child: isConnecting
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.black,
+                        ),
+                      )
+                    : Text(
+                        isInRange ? 'CONNECT' : 'RECONNECT',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
-              onPressed: isConnecting ? null : () => _connectToRegisteredRobot(robot, liveMatch),
-              child: isConnecting
-                  ? const SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.black,
-                      ),
-                    )
-                  : Text(
-                      isInRange ? 'CONNECT' : 'RECONNECT',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-            ),
             PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert, size: 18, color: AppColors.textSecondary),
               color: AppColors.surface,
-              onSelected: (action) {
-                if (action == 'rename') {
+              onSelected: (action) async {
+                if (action == 'disconnect') {
+                  await ref.read(bleConnectionManagerProvider).disconnect();
+                } else if (action == 'rename') {
                   _showRenameDialog(context, robot);
                 } else if (action == 'unpair') {
                   _showUnpairConfirmation(context, robot);
                 }
               },
               itemBuilder: (context) => [
+                if (isConnected)
+                  const PopupMenuItem(
+                    value: 'disconnect',
+                    child: Row(
+                      children: [
+                        Icon(Icons.link_off, size: 16, color: AppColors.amber),
+                        SizedBox(width: 8),
+                        Text('Disconnect', style: TextStyle(fontSize: 13, color: AppColors.amber)),
+                      ],
+                    ),
+                  ),
                 const PopupMenuItem(
                   value: 'rename',
                   child: Row(

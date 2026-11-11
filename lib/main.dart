@@ -34,11 +34,12 @@ class AppHomeShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isViewing = ref.watch(isViewingDeviceProvider);
     final connStateAsync = ref.watch(bleConnectionStateProvider);
     final connState = connStateAsync.value ??
         ref.read(bleConnectionManagerProvider).currentState;
 
-    if (connState == BleConnectionState.ready) {
+    if (isViewing && connState == BleConnectionState.ready) {
       return const DynamicScreenScaffold();
     }
     return const LandingDashboardScreen();
