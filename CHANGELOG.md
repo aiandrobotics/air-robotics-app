@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-11
+- Redesigned consumer landing dashboard with a modern futuristic cyber-industrial aesthetic, live system status badge, and Add Device hero banner.
+- Implemented persistent user robot fleet management (RegisteredRobot) with offline Hive document storage and in-memory test doubles.
+- Implemented "Your Devices" section displaying paired robots with live "IN RANGE" / "OFFLINE" connectivity badges, smoothed RSSI signal meters, 1-tap reconnect, custom nickname editing, and unpair actions.
+- Implemented continuous BLE auto-scanning for discovered candidate robots without requiring manual scan/stop buttons.
+- Created AddDeviceCatalogScreen presenting supported Day 1 hardware (Fabrica 4-Panel Planar Cloth Folder) and upcoming ecosystem hardware preview (AIR Arm-X1, AIR Rover-S).
+- Created PairRobotScreen with dedicated step-by-step physical button hold pairing guide, live radar search, and 1-tap "PAIR & CONNECT" action.
+- Configured native dark-mode launch splash screen on Android and iOS to eliminate white flashes.
+- Standardized application display name to "AIR Robotics" across Android and iOS manifests.
+- Added comprehensive unit and widget test suite for fleet storage, catalog, pairing flow, and landing dashboard with 100% pass rate across 107 tests.
+
 ## 2026-11-10
 - Implemented FabricaGeometry computing 2D planar fold kinematics, elevation shadows, and touch-drag calibration mapping.
 - Implemented FabricaFlapVisualizerWidget with hardware-accelerated 60 fps CustomPainter canvas, telemetry angle interpolation, and touch-drag servo calibration.

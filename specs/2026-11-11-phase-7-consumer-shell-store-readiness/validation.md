@@ -12,18 +12,23 @@ flutter analyze
 ### 2. Consumer Landing Dashboard & Onboarding Widget Tests
 ```bash
 flutter test test/screens/landing_dashboard_screen_test.dart
+flutter test test/screens/add_device_catalog_screen_test.dart
+flutter test test/screens/pair_robot_screen_test.dart
+flutter test test/fleet/fleet_storage_service_test.dart
 flutter test test/widget_test.dart
 ```
-- Verifies modern landing UI renders without Phase 1 developer text.
-- Verifies scanning radar animation and 3-second hold pairing prompt.
-- Verifies discovered robot card display, RSSI meter, and connect callback.
+- Verifies modern landing UI renders "+ ADD NEW DEVICE", "YOUR DEVICES", and "DISCOVERED ROBOTS".
+- Verifies continuous auto-scanning without manual scan/stop buttons.
+- Verifies discovered robot card display, RSSI meter, and 1-tap connect callback with automatic fleet persistence.
+- Verifies Add Device catalog renders Fabrica on Day 1 and upcoming ecosystem models.
+- Verifies dedicated pair screen displays step-by-step pairing guidance and live candidates.
 - Verifies pre-permission prompt display and actions.
 
 ### 3. Full Regression Test Suite
 ```bash
 flutter test
 ```
-- 100% pass rate across all existing tests (target: 100+ tests).
+- 100% pass rate across all existing tests (107 tests passing).
 
 ---
 

@@ -2,11 +2,15 @@
 
 ## Scope
 1. **Landing Onboarding Dashboard**:
-   - Modernized home screen replacing the initial developer placeholder text.
-   - Dedicated BLE discovery widget with active radar animation, scanning controls, discovered robot cards, and RSSI indicators.
-   - Clear visual instructions for the physical 3-second button hold pairing mode (`LED_STATE_BLE_PAIRING`).
+   - Modernized futuristic home screen with cyber-industrial aesthetic.
+   - Prominent "+ ADD NEW DEVICE" hero button linking to hardware catalog.
+   - "YOUR DEVICES" section displaying saved/paired robots persisted locally in Hive (`RegisteredRobot`), indicating live "IN RANGE" / "OFFLINE" connectivity with smoothed RSSI and quick connect/reconnect, rename, and unpair actions.
+   - "DISCOVERED ROBOTS" section with continuous auto-scanning (no manual scan/stop buttons needed), listing candidate devices with signal strength indicators and 1-tap "CONNECT" action.
    - Pre-permission rationale dialog before OS BLE/Location prompt.
-2. **App Store Assets & Packaging**:
+2. **Add Device Catalog & Dedicated Pairing Flow**:
+   - `AddDeviceCatalogScreen`: Day 1 catalog presenting Fabrica as active ready hardware with kinematic specs, and futuristic preview of upcoming ecosystem robots.
+   - `PairRobotScreen`: Dedicated pairing workflow with 3-second button hold guide, rapid LED pulse indicator, active Fabrica radar search, and 1-tap "PAIR & CONNECT" action.
+3. **App Store Assets & Packaging**:
    - Custom app launcher icons for Android and iOS.
    - Native dark splash screen matching `#0F172A` background color.
    - Standardized application display name "AIR Robotics".
