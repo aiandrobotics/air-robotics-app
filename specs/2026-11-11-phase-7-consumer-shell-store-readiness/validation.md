@@ -55,8 +55,8 @@ flutter test
 ---
 
 ## Merge Criteria
-- [ ] Working branch `phase-7-consumer-shell-store-readiness` created from `main`.
-- [ ] `flutter analyze` passes with 0 issues.
-- [ ] `flutter test` executes all unit and widget tests with 100% pass rate.
-- [ ] Merge to `main` with `--no-ff` and push to remote.
+- [x] Working branch `phase-7-consumer-shell-store-readiness` created from `main`.
+- [x] `flutter analyze` passes with 0 issues.
+- [x] `flutter test` executes all unit and widget tests with 100% pass rate (107/107 passed).
+- [ ] Merge to `main` with `--no-ff` and push to remote (on hold per user instruction).
 - [ ] `CHANGELOG.md` updated via `changelog-maintenance` skill.

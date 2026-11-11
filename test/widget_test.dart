@@ -20,9 +20,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('AIR ROBOTICS'), findsOneWidget);
-    expect(find.text('Fabrica Cloth Folder'), findsOneWidget);
-    expect(find.text('READY (PHASE 1)'), findsOneWidget);
-    expect(find.text('Universal Companion Ready'), findsOneWidget);
+    expect(find.text('EXPLORE FABRICA (DEMO MODE)'), findsOneWidget);
+    expect(find.text('HOW TO PAIR YOUR ROBOT'), findsOneWidget);
+    expect(find.text('DISCOVERED ROBOTS'), findsOneWidget);
 
     mockTransport.dispose();
   });
