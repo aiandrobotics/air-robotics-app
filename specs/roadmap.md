@@ -39,6 +39,7 @@ Testing against the physical Fabrica robot follows an incremental verification p
 | **Phase 4** | **✅ YES** | Automatic dynamic binding to DIS Model Number (`"Fabrica-DevKit-v1"`), loading on-device profile, and offline persistence. | Test profile overrides and configuration persistence against live device. |
 | **Phase 5** | **✅ YES** | Full UI surface testing: real-time status banner, jog slider bank, preset grid, and tactile E-Stop. | **`RawHexConsoleWidget`**: styled UI console with text input to send arbitrary hex commands and view live incoming packet stream. |
 | **Phase 6** | **✅ YES** | Complete operational validation: 2D Flap visualizer canvas animating at 60 fps matching physical flap motion, sequence preview, and flash button commits. | Full end-to-end multi-step sequence execution on physical robot. |
+| **Phase 7** | **✅ YES (Host & Hardware)** | Consumer landing dashboard, 1-tap BLE pair flow, pre-permission prompts, and offline virtual simulator mode. | Verify consumer connection flow against live Fabrica hardware and offline demo without robot. |
 
 ---
 
@@ -168,6 +169,24 @@ Testing against the physical Fabrica robot follows an incremental verification p
 
 ---
 
-## Future Expansion: Cloud Profile Registry (Phase 7+)
+## Phase 7 — Consumer Shell Polish & App Store Readiness
+- **Consumer Onboarding & Home Dashboard Redesign** (`lib/main.dart`):
+  - Replace early developer placeholders on the disconnected landing screen with a consumer-grade onboarding experience.
+  - Active BLE Discovery Card with scanning pulse/radar animation, 3-second Hold-to-Pair visual prompt, RSSI signal strength meter, and 1-tap "CONNECT" button.
+  - Pre-permission explanation dialog explaining that Bluetooth is used exclusively for direct local robot control without account or internet requirements.
+- **Offline Demo & Virtual Simulator Mode**:
+  - "Explore Fabrica (Demo Mode)" 1-tap entry point on the landing screen.
+  - Allows customers, testers, and app store reviewers without physical robot hardware to interactively experience the 2D Kinematic Flap Canvas and Timeline Sequencer via a synthetic 10 Hz virtual telemetry stream.
+- **App Store Branding & Packaging**:
+  - Branded app launcher icons (Android adaptive icons + iOS asset catalog).
+  - Native splash screen with dark industrial aesthetic.
+  - Production application identifier (`com.airrobotics.app` or configurable white-label flavor) and Android release signing configuration.
+- **Automated Validation**:
+  - Unit and widget tests for the new consumer landing screen, demo mode state machine, and permission flow.
+  - Strict static analysis (`flutter analyze` with 0 issues).
+
+---
+
+## Future Expansion: Cloud Profile Registry (Phase 8+)
 - Asynchronous cloud synchronization from `registry.air-robotics.org` using HTTP ETag caching.
 - Over-the-air profile updates for community-built robotics hardware without requiring new mobile app store releases.
