@@ -35,7 +35,7 @@ void main() {
       );
     }
 
-    testWidgets('renders consumer branding, demo card, and pairing guide',
+    testWidgets('renders consumer branding and pairing guide',
         (tester) async {
       await tester.binding.setSurfaceSize(const Size(600, 900));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -44,9 +44,6 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('AIR ROBOTICS'), findsOneWidget);
-      expect(find.text('EXPLORE FABRICA (DEMO MODE)'), findsOneWidget);
-      expect(find.text('NO HARDWARE NEEDED'), findsOneWidget);
-      expect(find.text('START VIRTUAL DEMO'), findsOneWidget);
       expect(find.text('HOW TO PAIR YOUR ROBOT'), findsOneWidget);
       expect(find.text('DISCOVERED ROBOTS'), findsOneWidget);
       expect(find.text('SCAN FOR ROBOTS'), findsOneWidget);
@@ -71,29 +68,6 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Local Hardware Access'), findsNothing);
-    });
-
-    testWidgets('start virtual demo activates demo mode and transitions state',
-        (tester) async {
-      await tester.binding.setSurfaceSize(const Size(600, 900));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-
-      final container = ProviderContainer(
-        overrides: [
-          bleTransportProvider.overrideWithValue(mockTransport),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      await tester.pumpWidget(createTestApp(container: container));
-      await tester.pumpAndSettle();
-
-      expect(container.read(isDemoModeProvider), isFalse);
-
-      await tester.tap(find.text('START VIRTUAL DEMO'));
-      await tester.pumpAndSettle();
-
-      expect(container.read(isDemoModeProvider), isTrue);
     });
 
     testWidgets('renders discovered robot cards with pairing badge and connect action',

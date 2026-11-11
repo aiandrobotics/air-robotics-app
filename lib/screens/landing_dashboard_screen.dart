@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/ble/ble_providers.dart';
 import '../core/ble/ble_transport_interface.dart';
 import '../core/ble/developer_debug_screen.dart';
-import '../core/ble/simulated_ble_transport.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_tokens.dart';
 
@@ -79,16 +78,6 @@ class _LandingDashboardScreenState
         ],
       ),
     );
-  }
-
-  Future<void> _startVirtualDemo() async {
-    ref.read(isDemoModeProvider.notifier).enableDemoMode();
-    try {
-      final manager = ref.read(bleConnectionManagerProvider);
-      await manager.connect(SimulatedBleTransport.defaultSimulatedRobot);
-    } catch (_) {
-      // Handled by connection state listeners
-    }
   }
 
   Future<void> _connectToRobot(DiscoveredRobot robot) async {
@@ -173,12 +162,7 @@ class _LandingDashboardScreenState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // 1. Virtual Simulator / Offline Demo Banner
-              _buildDemoBanner(),
-
-              const SizedBox(height: AppTokens.space16),
-
-              // 2. Hardware Pairing Step Guide
+              // 1. Hardware Pairing Step Guide
               _buildPairingGuideCard(),
 
               const SizedBox(height: AppTokens.space16),
@@ -256,96 +240,6 @@ class _LandingDashboardScreenState
                 ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDemoBanner() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: AppTokens.borderRadiusLg,
-        side: const BorderSide(color: AppColors.cyan, width: 1.2),
-      ),
-      child: Padding(
-        padding: AppTokens.paddingCard,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Row(
-                    children: [
-                      const Icon(Icons.auto_awesome,
-                          color: AppColors.cyan, size: 20),
-                      const SizedBox(width: AppTokens.space8),
-                      const Flexible(
-                        child: Text(
-                          'EXPLORE FABRICA (DEMO MODE)',
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.cyan,
-                            letterSpacing: 0.8,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: AppTokens.space8),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppColors.purple.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: const Text(
-                    'NO HARDWARE NEEDED',
-                    style: TextStyle(
-                      fontSize: 9,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.purple,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppTokens.space8),
-            const Text(
-              'Test the 60 fps 2D Kinematic Canvas, multi-step sequence builder, and real-time telemetry streaming using our built-in virtual robot simulator.',
-              style: TextStyle(
-                fontSize: 12,
-                color: AppColors.textSecondary,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: AppTokens.space12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.cyan,
-                  foregroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                icon: const Icon(Icons.play_circle_filled, size: 18),
-                label: const Text(
-                  'START VIRTUAL DEMO',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                onPressed: _startVirtualDemo,
-              ),
-            ),
-          ],
         ),
       ),
     );

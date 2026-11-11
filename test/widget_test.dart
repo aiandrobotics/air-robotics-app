@@ -20,7 +20,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('AIR ROBOTICS'), findsOneWidget);
-    expect(find.text('EXPLORE FABRICA (DEMO MODE)'), findsOneWidget);
     expect(find.text('HOW TO PAIR YOUR ROBOT'), findsOneWidget);
     expect(find.text('DISCOVERED ROBOTS'), findsOneWidget);
 

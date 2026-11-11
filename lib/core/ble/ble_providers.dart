@@ -4,37 +4,11 @@ import 'ble_connection_manager.dart';
 import 'ble_scanner.dart';
 import 'ble_transport_interface.dart';
 import 'flutter_blue_plus_transport.dart';
-import 'simulated_ble_transport.dart';
-
-/// Notifier controlling whether the application is running in offline demo mode.
-class DemoModeNotifier extends Notifier<bool> {
-  @override
-  bool build() => false;
-
-  void enableDemoMode() {
-    state = true;
-  }
-
-  void disableDemoMode() {
-    state = false;
-  }
-}
-
-/// Provider tracking active offline demo / simulator mode.
-final isDemoModeProvider = NotifierProvider<DemoModeNotifier, bool>(
-  DemoModeNotifier.new,
-);
 
 /// Provider for the active BLE Transport layer.
 ///
 /// Can be overridden in test environments using `ProviderScope(overrides: [...])`.
 final bleTransportProvider = Provider<BleTransport>((ref) {
-  final isDemo = ref.watch(isDemoModeProvider);
-  if (isDemo) {
-    final transport = SimulatedBleTransport();
-    ref.onDispose(() => transport.dispose());
-    return transport;
-  }
   final transport = FlutterBluePlusTransport();
   ref.onDispose(() => transport.dispose());
   return transport;

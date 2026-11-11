@@ -37,7 +37,6 @@ class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
         ref.read(bleConnectionManagerProvider).currentState;
     final packet =
         telemetryAsync.value ?? ref.read(telemetryBusProvider).latestPacket;
-    final isDemo = ref.watch(isDemoModeProvider);
 
     final screens = activeProfile.screens;
     final safeIndex = _selectedScreenIndex.clamp(
@@ -81,26 +80,6 @@ class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
           ],
         ),
         actions: [
-          if (isDemo)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: ActionChip(
-                backgroundColor: AppColors.purple.withValues(alpha: 0.2),
-                side: const BorderSide(color: AppColors.purple),
-                label: const Text(
-                  'EXIT DEMO',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.purple,
-                  ),
-                ),
-                onPressed: () {
-                  ref.read(bleConnectionManagerProvider).disconnect();
-                  ref.read(isDemoModeProvider.notifier).disableDemoMode();
-                },
-              ),
-            ),
           IconButton(
             icon: const Icon(Icons.bug_report),
             tooltip: 'BLE Hardware Debugger',
