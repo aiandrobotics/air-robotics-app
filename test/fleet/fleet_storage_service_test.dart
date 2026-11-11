@@ -54,6 +54,13 @@ void main() {
       final remaining = await storage.getRegisteredRobots();
       expect(remaining.length, 1);
       expect(remaining.first.id, 'robot-1');
+
+      // Test last connected robot id persistence
+      expect(await storage.getLastConnectedRobotId(), isNull);
+      await storage.setLastConnectedRobotId('robot-1');
+      expect(await storage.getLastConnectedRobotId(), 'robot-1');
+      await storage.setLastConnectedRobotId(null);
+      expect(await storage.getLastConnectedRobotId(), isNull);
     });
   });
 
@@ -100,6 +107,12 @@ void main() {
       await hiveStorage.removeRobot('hive-fabrica-1');
       final empty = await hiveStorage.getRegisteredRobots();
       expect(empty, isEmpty);
+
+      // Persist and restore last connected id
+      await hiveStorage.setLastConnectedRobotId('hive-fabrica-1');
+      expect(await hiveStorage.getLastConnectedRobotId(), 'hive-fabrica-1');
+      await hiveStorage.setLastConnectedRobotId(null);
+      expect(await hiveStorage.getLastConnectedRobotId(), isNull);
     });
   });
 }

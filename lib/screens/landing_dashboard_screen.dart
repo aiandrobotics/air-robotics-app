@@ -22,13 +22,15 @@ class LandingDashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late AnimationController _radarController;
   String? _connectingDeviceId;
+  bool _isAutoConnecting = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _radarController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
@@ -42,13 +44,59 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _radarController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // User returned to the app: reset manual disconnect and search to auto-connect
+      ref.read(bleConnectionManagerProvider).resetManualDisconnect();
+      _startContinuousAutoScan();
+      final currentDiscovered = ref.read(discoveredRobotsProvider).value ?? [];
+      _checkAndAutoConnect(currentDiscovered);
+    }
   }
 
   void _startContinuousAutoScan() {
     final scanner = ref.read(bleScannerProvider);
     scanner.startScan(timeout: const Duration(seconds: 60));
+  }
+
+  Future<void> _checkAndAutoConnect(List<DiscoveredRobot> discoveredList) async {
+    final manager = ref.read(bleConnectionManagerProvider);
+    if (manager.currentState != BleConnectionState.disconnected) return;
+    if (manager.isManualDisconnect) return;
+    if (_isAutoConnecting) return;
+
+    final registeredList = ref.read(registeredRobotsProvider).value ?? [];
+    if (registeredList.isEmpty) return;
+
+    final registeredMap = {for (var r in registeredList) r.id: r};
+    final lastId = await ref.read(fleetStorageProvider).getLastConnectedRobotId();
+
+    DiscoveredRobot? candidate;
+    if (lastId != null) {
+      candidate = discoveredList.where((d) => d.id == lastId).firstOrNull;
+    }
+    candidate ??= discoveredList.where((d) => registeredMap.containsKey(d.id)).firstOrNull;
+
+    if (candidate != null && mounted) {
+      _isAutoConnecting = true;
+      try {
+        await manager.connect(candidate);
+        await ref.read(fleetStorageProvider).setLastConnectedRobotId(candidate.id);
+        ref.read(isViewingDeviceProvider.notifier).openDevice();
+      } catch (_) {
+        // Silently ignore; will retry on next advertisement
+      } finally {
+        if (mounted) {
+          setState(() => _isAutoConnecting = false);
+        }
+      }
+    }
   }
 
   void _showPermissionInfo(BuildContext context) {
@@ -95,9 +143,11 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
 
   Future<void> _connectToDiscoveredRobot(DiscoveredRobot robot) async {
     setState(() => _connectingDeviceId = robot.id);
+    ref.read(bleConnectionManagerProvider).resetManualDisconnect();
     try {
       final manager = ref.read(bleConnectionManagerProvider);
       await manager.connect(robot);
+      await ref.read(fleetStorageProvider).setLastConnectedRobotId(robot.id);
 
       // Auto-register newly connected robot in user's saved fleet
       final registered = RegisteredRobot(
@@ -128,6 +178,7 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
 
   Future<void> _connectToRegisteredRobot(RegisteredRobot registered, DiscoveredRobot? liveMatch) async {
     setState(() => _connectingDeviceId = registered.id);
+    ref.read(bleConnectionManagerProvider).resetManualDisconnect();
     try {
       final manager = ref.read(bleConnectionManagerProvider);
       final candidate = liveMatch ??
@@ -140,6 +191,7 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
             lastSeen: DateTime.now(),
           );
       await manager.connect(candidate);
+      await ref.read(fleetStorageProvider).setLastConnectedRobotId(registered.id);
       ref.read(isViewingDeviceProvider.notifier).openDevice();
     } catch (e) {
       if (mounted) {
@@ -244,6 +296,12 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
         _radarController.stop();
         _radarController.reset();
       }
+    });
+
+    // Opportunistically auto-connect to registered fleet robot when detected in scan
+    ref.listen<AsyncValue<List<DiscoveredRobot>>>(discoveredRobotsProvider, (prev, next) {
+      final discoveredList = next.value ?? [];
+      _checkAndAutoConnect(discoveredList);
     });
 
     final isScanningAsync = ref.watch(isScanningProvider);

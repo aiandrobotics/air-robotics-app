@@ -85,7 +85,7 @@ void main() {
       expect(find.text('Local Hardware Access'), findsNothing);
     });
 
-    testWidgets('renders registered robots in Your Devices with range status',
+    testWidgets('renders registered robots in Your Devices and auto-connects when detected in scan',
         (tester) async {
       await tester.binding.setSurfaceSize(const Size(600, 1000));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -121,9 +121,10 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      // Now status updates to IN RANGE
-      expect(find.text('IN RANGE'), findsOneWidget);
-      expect(find.text('CONNECT'), findsOneWidget);
+      // Opportunistic auto-connect connects to the paired robot!
+      expect(mockTransport.currentConnectionState, BleConnectionState.connected);
+      expect(find.text('CONNECTED'), findsOneWidget);
+      expect(find.text('OPEN'), findsOneWidget);
       expect(find.textContaining('-58 dBm'), findsOneWidget);
     });
 

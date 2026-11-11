@@ -1,6 +1,10 @@
 # Changelog
 
 ## 2026-11-11
+- Implemented opportunistic BLE auto-reconnection for paired fleet robots when detected in background scans or upon app resume.
+- Added WidgetsBindingObserver lifecycle handling to automatically restart scans and reconnect to paired hardware when returning to the app.
+- Added bidirectional back navigation between the connected device controls screen and the landing dashboard with PopScope system gesture support.
+- Added last-connected robot ID persistence in FleetStorageService to prioritize re-establishing link with the active robot.
 - Redesigned consumer landing dashboard with a modern futuristic cyber-industrial aesthetic, live system status badge, and Add Device hero banner.
 - Implemented persistent user robot fleet management (RegisteredRobot) with offline Hive document storage and in-memory test doubles.
 - Implemented "Your Devices" section displaying paired robots with live "IN RANGE" / "OFFLINE" connectivity badges, smoothed RSSI signal meters, 1-tap reconnect, custom nickname editing, and unpair actions.

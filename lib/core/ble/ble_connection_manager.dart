@@ -35,6 +35,12 @@ class BleConnectionManager {
   BleConnectionState get currentState => _state;
   BleGattInfo? get gattInfo => _gattInfo;
   DiscoveredRobot? get connectedRobot => _targetRobot;
+  bool get isManualDisconnect => _manualDisconnect;
+
+  /// Resets the manual disconnect flag (e.g. on app resume or user reconnect).
+  void resetManualDisconnect() {
+    _manualDisconnect = false;
+  }
 
   /// Connects to [robot], requests 517B MTU, establishes SMP bonding,
   /// discovers GATT services, and enters [BleConnectionState.ready].

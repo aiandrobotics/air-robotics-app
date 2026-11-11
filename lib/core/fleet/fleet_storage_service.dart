@@ -10,12 +10,15 @@ abstract class FleetStorageService {
   Future<void> saveRobot(RegisteredRobot robot);
   Future<void> removeRobot(String id);
   Future<void> updateNickname(String id, String nickname);
+  Future<void> setLastConnectedRobotId(String? id);
+  Future<String?> getLastConnectedRobotId();
   Future<void> close();
 }
 
 /// Hive NoSQL document storage implementation for user robot fleet.
 class HiveFleetStorageService implements FleetStorageService {
   static const String boxName = 'air_registered_robots';
+  static const String lastConnectedKey = '__last_connected_robot_id__';
 
   Box<String>? _box;
 
@@ -41,9 +44,10 @@ class HiveFleetStorageService implements FleetStorageService {
     try {
       final box = await _getBox();
       final list = <RegisteredRobot>[];
-      for (final raw in box.values) {
+      for (final entry in box.toMap().entries) {
+        if (entry.key == lastConnectedKey) continue;
         try {
-          final map = jsonDecode(raw) as Map<String, dynamic>;
+          final map = jsonDecode(entry.value) as Map<String, dynamic>;
           list.add(RegisteredRobot.fromJson(map));
         } catch (_) {
           // Ignore malformed individual entries
@@ -67,6 +71,10 @@ class HiveFleetStorageService implements FleetStorageService {
   Future<void> removeRobot(String id) async {
     final box = await _getBox();
     await box.delete(id);
+    final last = await getLastConnectedRobotId();
+    if (last == id) {
+      await setLastConnectedRobotId(null);
+    }
   }
 
   @override
@@ -86,6 +94,22 @@ class HiveFleetStorageService implements FleetStorageService {
   }
 
   @override
+  Future<void> setLastConnectedRobotId(String? id) async {
+    final box = await _getBox();
+    if (id == null) {
+      await box.delete(lastConnectedKey);
+    } else {
+      await box.put(lastConnectedKey, id);
+    }
+  }
+
+  @override
+  Future<String?> getLastConnectedRobotId() async {
+    final box = await _getBox();
+    return box.get(lastConnectedKey);
+  }
+
+  @override
   Future<void> close() async {
     if (_box != null && _box!.isOpen) {
       await _box!.close();
@@ -96,6 +120,7 @@ class HiveFleetStorageService implements FleetStorageService {
 /// In-memory implementation of [FleetStorageService] for fast unit/widget testing.
 class InMemoryFleetStorageService implements FleetStorageService {
   final Map<String, RegisteredRobot> _robots = {};
+  String? _lastConnectedRobotId;
 
   InMemoryFleetStorageService([List<RegisteredRobot>? initialRobots]) {
     if (initialRobots != null) {
@@ -123,6 +148,9 @@ class InMemoryFleetStorageService implements FleetStorageService {
   @override
   Future<void> removeRobot(String id) async {
     _robots.remove(id);
+    if (_lastConnectedRobotId == id) {
+      _lastConnectedRobotId = null;
+    }
   }
 
   @override
@@ -136,7 +164,18 @@ class InMemoryFleetStorageService implements FleetStorageService {
   }
 
   @override
+  Future<void> setLastConnectedRobotId(String? id) async {
+    _lastConnectedRobotId = id;
+  }
+
+  @override
+  Future<String?> getLastConnectedRobotId() async {
+    return _lastConnectedRobotId;
+  }
+
+  @override
   Future<void> close() async {
     _robots.clear();
+    _lastConnectedRobotId = null;
   }
 }

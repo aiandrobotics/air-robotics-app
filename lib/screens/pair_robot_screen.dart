@@ -58,7 +58,9 @@ class _PairRobotScreenState extends ConsumerState<PairRobotScreen>
     setState(() => _connectingDeviceId = robot.id);
     try {
       final manager = ref.read(bleConnectionManagerProvider);
+      manager.resetManualDisconnect();
       await manager.connect(robot);
+      await ref.read(fleetStorageProvider).setLastConnectedRobotId(robot.id);
 
       // Save to registered fleet
       final registeredRobot = RegisteredRobot(
