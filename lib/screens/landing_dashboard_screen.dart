@@ -512,7 +512,7 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'ADD NEW DEVICE',
+                        'ADD NEW ROBOT',
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,

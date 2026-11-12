@@ -53,7 +53,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.text('AIR ROBOTICS'), findsOneWidget);
-      expect(find.text('ADD NEW DEVICE'), findsOneWidget);
+      expect(find.text('ADD NEW ROBOT'), findsOneWidget);
       expect(find.text('YOUR DEVICES'), findsOneWidget);
       expect(find.text('No Devices Paired Yet'), findsOneWidget);
       expect(find.text('ADD YOUR FIRST ROBOT'), findsOneWidget);
@@ -178,11 +178,11 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      await tester.tap(find.text('ADD NEW DEVICE'));
+      await tester.tap(find.text('ADD NEW ROBOT').first);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
-      expect(find.text('ADD NEW ROBOT'), findsOneWidget);
+      expect(find.widgetWithText(AppBar, 'ADD NEW ROBOT'), findsOneWidget);
       expect(find.text('FABRICA'), findsOneWidget);
       expect(find.text('SUPPORTED ROBOTS (DAY 1)'), findsOneWidget);
     });

@@ -30,7 +30,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.text('AIR ROBOTICS'), findsOneWidget);
-    expect(find.text('ADD NEW DEVICE'), findsOneWidget);
+    expect(find.text('ADD NEW ROBOT'), findsOneWidget);
     expect(find.text('YOUR DEVICES'), findsOneWidget);
     expect(find.text('DISCOVERED ROBOTS'), findsOneWidget);
 
