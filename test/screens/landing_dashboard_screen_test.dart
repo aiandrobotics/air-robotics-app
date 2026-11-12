@@ -54,6 +54,7 @@ void main() {
 
       expect(find.text('AIR ROBOTICS'), findsOneWidget);
       expect(find.text('ADD NEW ROBOT'), findsOneWidget);
+      expect(find.text('Pair AIR robots'), findsOneWidget);
       expect(find.text('YOUR DEVICES'), findsOneWidget);
       expect(find.text('No Devices Paired Yet'), findsOneWidget);
       expect(find.text('ADD YOUR FIRST ROBOT'), findsOneWidget);

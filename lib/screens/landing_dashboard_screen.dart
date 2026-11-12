@@ -461,7 +461,7 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
                       ),
                       SizedBox(height: 3),
                       Text(
-                        'Pair Fabrica cloth folder or other AIR robots',
+                        'Pair AIR robots',
                         style: TextStyle(
                           fontSize: 11,
                           color: AppColors.textSecondary,
