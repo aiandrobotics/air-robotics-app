@@ -278,17 +278,17 @@ class _PairRobotScreenState extends ConsumerState<PairRobotScreen>
           const SizedBox(height: AppTokens.space12),
           _buildInstructionStep(
             '1',
-            'Press and hold the physical button on Fabrica for 3 seconds.',
+            'First Device / 0 Bonds: Simply power on or reset your robot. It automatically opens a 120-second pairing window on boot.',
           ),
           const SizedBox(height: 8),
           _buildInstructionStep(
             '2',
-            'Verify the onboard status LED flashes rapidly in pairing mode.',
+            'From 2nd Device Onwards: Press and hold Button 1 on Fabrica for 3 seconds until the onboard LED flashes rapidly.',
           ),
           const SizedBox(height: 8),
           _buildInstructionStep(
             '3',
-            'Keep your phone within 2 meters of the robot during initial connection.',
+            'Keep your phone within 2 meters of the robot during initial connection to complete secure BLE bonding.',
           ),
         ],
       ),
@@ -365,7 +365,7 @@ class _PairRobotScreenState extends ConsumerState<PairRobotScreen>
             const SizedBox(height: AppTokens.space4),
             Text(
               isScanning
-                  ? 'Make sure the robot button was held for 3s to enter pairing mode.'
+                  ? 'First device: Power on robot (auto-pairs for 120s on boot).\n2nd device onwards: Hold Button 1 for 3s to enter pairing mode.'
                   : 'Check power switch and tap the top right icon to restart scan.',
               textAlign: TextAlign.center,
               style: const TextStyle(

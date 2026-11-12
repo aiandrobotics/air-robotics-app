@@ -78,7 +78,7 @@ void main() {
 
       expect(find.text('PAIR FABRICA-DEVKIT-V1'), findsOneWidget);
       expect(find.text('PAIRING PROCEDURE'), findsOneWidget);
-      expect(find.textContaining('Press and hold the physical button'), findsOneWidget);
+      expect(find.textContaining('From 2nd Device Onwards: Press and hold Button 1'), findsOneWidget);
     });
   });
 }

@@ -427,32 +427,33 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
                   },
                 ),
 
-              const SizedBox(height: AppTokens.space24),
-
-              // 3. "DISCOVERED ROBOTS" Section (Continuous Auto-Scan, no manual button needed)
-              _buildSectionHeader(
-                title: 'DISCOVERED ROBOTS',
-                badgeText: isScanning ? 'AUTO-SCANNING' : 'IDLE',
-                badgeColor: isScanning ? AppColors.cyan : AppColors.textMuted,
-                icon: Icons.radar,
-                isScanning: isScanning,
-              ),
-              const SizedBox(height: AppTokens.space8),
-
-              if (candidateDiscovered.isEmpty)
-                _buildEmptyDiscoveredPrompt(isScanning)
-              else
-                ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: candidateDiscovered.length,
-                  separatorBuilder: (context, index) =>
-                      const SizedBox(height: AppTokens.space8),
-                  itemBuilder: (context, index) {
-                    final robot = candidateDiscovered[index];
-                    return _buildDiscoveredCandidateCard(robot);
-                  },
+              // 3. "DISCOVERED ROBOTS" Section (Only shown when 0 devices are paired)
+              if (registeredList.isEmpty) ...[
+                const SizedBox(height: AppTokens.space24),
+                _buildSectionHeader(
+                  title: 'DISCOVERED ROBOTS',
+                  badgeText: isScanning ? 'AUTO-SCANNING' : 'IDLE',
+                  badgeColor: isScanning ? AppColors.cyan : AppColors.textMuted,
+                  icon: Icons.radar,
+                  isScanning: isScanning,
                 ),
+                const SizedBox(height: AppTokens.space8),
+
+                if (candidateDiscovered.isEmpty)
+                  _buildEmptyDiscoveredPrompt(isScanning)
+                else
+                  ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: candidateDiscovered.length,
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: AppTokens.space8),
+                    itemBuilder: (context, index) {
+                      final robot = candidateDiscovered[index];
+                      return _buildDiscoveredCandidateCard(robot);
+                    },
+                  ),
+              ],
             ],
           ),
         ),
@@ -625,7 +626,7 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
           ),
           const SizedBox(height: AppTokens.space4),
           const Text(
-            'Add your Fabrica cloth folder to view telemetry, presets, and control flap routines.',
+            'New robots automatically enter pairing mode for 120s on power-up. Connect your Fabrica cloth folder to view telemetry, presets, and control flap routines.',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 11,
@@ -1049,7 +1050,7 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
             const SizedBox(height: AppTokens.space4),
             Text(
               isScanning
-                  ? 'Hold robot button for 3s to enter pairing mode.'
+                  ? 'First robot: Simply power on (auto-pairs for 120s).\n2nd device onwards: Hold Button 1 for 3s to pair.'
                   : 'Your nearby robots will appear here automatically.',
               textAlign: TextAlign.center,
               style: const TextStyle(

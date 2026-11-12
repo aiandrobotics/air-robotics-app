@@ -106,6 +106,8 @@ void main() {
       expect(find.text('Living Room Folder'), findsOneWidget);
       expect(find.text('OFFLINE'), findsOneWidget);
       expect(find.text('RECONNECT'), findsOneWidget);
+      // Discovered robots section is hidden when devices are already paired
+      expect(find.text('DISCOVERED ROBOTS'), findsNothing);
 
       // Now emit scan result matching this robot ID
       mockTransport.emitDiscoveredRobots([
