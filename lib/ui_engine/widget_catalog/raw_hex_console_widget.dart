@@ -271,9 +271,9 @@ class _RawHexConsoleWidgetState extends ConsumerState<RawHexConsoleWidget> {
               children: [
                 ActionChip(
                   avatar: const Icon(Icons.camera_alt_outlined, size: 14, color: AppColors.cyan),
-                  label: const Text('SNAPSHOT (0x10)', style: TextStyle(fontSize: 10)),
+                  label: const Text('SNAPSHOT', style: TextStyle(fontSize: 10)),
                   onPressed: () async {
-                    _addLog('TX -> FAB1: [10] (CMD_GET_TELEMETRY)');
+                    _addLog('Requesting telemetry snapshot...');
                     try {
                       await ref.read(commandPipelineProvider).getTelemetry();
                     } catch (e) {
@@ -288,12 +288,12 @@ class _RawHexConsoleWidgetState extends ConsumerState<RawHexConsoleWidget> {
                     color: isStreamActive ? AppColors.amber : AppColors.emerald,
                   ),
                   label: Text(
-                    isStreamActive ? 'PAUSE STREAM (0x11)' : 'RESUME STREAM (0x11)',
+                    isStreamActive ? 'PAUSE STREAM' : 'RESUME STREAM',
                     style: const TextStyle(fontSize: 10),
                   ),
                   onPressed: () async {
                     final nextState = !isStreamActive;
-                    _addLog('TX -> FAB1: [11 ${nextState ? '01' : '00'}] (CMD_SET_TELEMETRY_STREAM)');
+                    _addLog(nextState ? 'Resuming telemetry stream...' : 'Pausing telemetry stream...');
                     try {
                       await ref.read(commandPipelineProvider).setTelemetryStream(nextState);
                       ref.read(isTelemetryStreamActiveProvider.notifier).setStreamActive(nextState);
@@ -304,9 +304,9 @@ class _RawHexConsoleWidgetState extends ConsumerState<RawHexConsoleWidget> {
                 ),
                 ActionChip(
                   avatar: const Icon(Icons.flare, size: 14, color: AppColors.purple),
-                  label: const Text('IDENTIFY (0x0E)', style: TextStyle(fontSize: 10)),
+                  label: const Text('IDENTIFY', style: TextStyle(fontSize: 10)),
                   onPressed: () async {
-                    _addLog('TX -> FAB1: [0E] (CMD_IDENTIFY_ROBOT)');
+                    _addLog('Flashing robot LED for 3 seconds...');
                     try {
                       await ref.read(commandPipelineProvider).identifyRobot();
                     } catch (e) {
@@ -316,13 +316,13 @@ class _RawHexConsoleWidgetState extends ConsumerState<RawHexConsoleWidget> {
                 ),
                 ActionChip(
                   avatar: const Icon(Icons.sync, size: 14, color: AppColors.cyan),
-                  label: const Text('GET CONFIG (0x0B)', style: TextStyle(fontSize: 10)),
+                  label: const Text('SYNC ROUTINES', style: TextStyle(fontSize: 10)),
                   onPressed: () async {
-                    _addLog('TX -> FAB1: [0B] (CMD_GET_BUTTON_CONFIG)');
+                    _addLog('Syncing routine table from robot...');
                     try {
                       await ref.read(commandPipelineProvider).getButtonConfig();
                     } catch (e) {
-                      _addLog('ERR: Get config failed: $e');
+                      _addLog('ERR: Sync failed: $e');
                     }
                   },
                 ),
@@ -331,7 +331,7 @@ class _RawHexConsoleWidgetState extends ConsumerState<RawHexConsoleWidget> {
 
             const SizedBox(height: AppTokens.space12),
 
-            // Device Information Service (DIS 0x180A) Static Metadata
+            // Device Information Service (DIS) Static Metadata
             Container(
               padding: const EdgeInsets.all(AppTokens.space12),
               decoration: BoxDecoration(
@@ -347,7 +347,7 @@ class _RawHexConsoleWidgetState extends ConsumerState<RawHexConsoleWidget> {
                       Icon(Icons.info_outline, size: 14, color: AppColors.cyan),
                       SizedBox(width: 6),
                       Text(
-                        'DEVICE INFORMATION SERVICE (DIS 0x180A)',
+                        'DEVICE INFORMATION',
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
@@ -361,7 +361,7 @@ class _RawHexConsoleWidgetState extends ConsumerState<RawHexConsoleWidget> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Model Number (0x2A24):', style: TextStyle(fontSize: 10, color: AppColors.textMuted)),
+                      Text('Model Number:', style: TextStyle(fontSize: 10, color: AppColors.textMuted)),
                       Text('Fabrica-DevKit-v1', style: TextStyle(fontSize: 10, fontFamily: 'monospace', fontWeight: FontWeight.bold)),
                     ],
                   ),
@@ -369,7 +369,7 @@ class _RawHexConsoleWidgetState extends ConsumerState<RawHexConsoleWidget> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Firmware Revision (0x2A26):', style: TextStyle(fontSize: 10, color: AppColors.textMuted)),
+                      Text('Firmware Revision:', style: TextStyle(fontSize: 10, color: AppColors.textMuted)),
                       Text('v1.13.0', style: TextStyle(fontSize: 10, fontFamily: 'monospace', fontWeight: FontWeight.bold, color: AppColors.emerald)),
                     ],
                   ),
@@ -377,7 +377,7 @@ class _RawHexConsoleWidgetState extends ConsumerState<RawHexConsoleWidget> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Manufacturer Name (0x2A29):', style: TextStyle(fontSize: 10, color: AppColors.textMuted)),
+                      Text('Manufacturer Name:', style: TextStyle(fontSize: 10, color: AppColors.textMuted)),
                       Text('AIR Robotics', style: TextStyle(fontSize: 10, fontFamily: 'monospace', fontWeight: FontWeight.bold)),
                     ],
                   ),
@@ -394,7 +394,7 @@ class _RawHexConsoleWidgetState extends ConsumerState<RawHexConsoleWidget> {
                   child: TextField(
                     controller: _hexController,
                     decoration: const InputDecoration(
-                      labelText: 'Hex Opcode / Payload',
+                      labelText: 'Command Payload (Hex)',
                       hintText: 'e.g. 0E or 00 01',
                       isDense: true,
                     ),

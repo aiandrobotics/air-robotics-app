@@ -193,5 +193,31 @@ void main() {
       final activeProfile = container.read(activeProfileProvider);
       expect(activeProfile.modelNumber, equals('Fabrica-DevKit-v1'));
     });
+
+    test('falls back to non-Fabrica robot name when DIS model is empty string', () async {
+      container.listen<DeviceProfile>(
+        activeProfileProvider,
+        (previous, next) {},
+        fireImmediately: true,
+      );
+
+      final manager = container.read(bleConnectionManagerProvider);
+      mockTransport.mockModelNumber = '';
+
+      final robot = DiscoveredRobot(
+        id: '33:44:55:66:77:88',
+        name: 'AIR-Rover-01',
+        rawRssi: -50,
+        smoothedRssi: -50.0,
+        isPairingMode: false,
+        lastSeen: DateTime.now(),
+      );
+
+      await manager.connect(robot);
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      final activeProfile = container.read(activeProfileProvider);
+      expect(activeProfile.modelNumber, equals('AIR-Rover-01'));
+    });
   });
 }

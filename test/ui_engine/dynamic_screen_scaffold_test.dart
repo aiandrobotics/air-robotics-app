@@ -1,10 +1,16 @@
 import 'dart:io';
 
 import 'package:air_robotics_app/core/ble/ble_providers.dart';
+import 'package:air_robotics_app/core/ble/ble_transport_interface.dart';
 import 'package:air_robotics_app/core/ble/developer_debug_screen.dart';
 import 'package:air_robotics_app/core/fleet/fleet_providers.dart';
 import 'package:air_robotics_app/core/fleet/fleet_storage_service.dart';
+import 'package:air_robotics_app/core/fleet/registered_robot.dart';
+import 'package:air_robotics_app/core/profile/device_profile.dart';
+import 'package:air_robotics_app/core/profile/diagnostic_profile_builder.dart';
 import 'package:air_robotics_app/core/profile/profile_providers.dart';
+import 'package:air_robotics_app/core/profile/profile_resolver.dart';
+import 'package:air_robotics_app/core/profile/profile_storage_service.dart';
 import 'package:air_robotics_app/core/profile/profile_validator.dart';
 import 'package:air_robotics_app/core/protocol/command_pipeline.dart';
 import 'package:air_robotics_app/core/protocol/protocol_providers.dart';
@@ -205,8 +211,8 @@ void main() {
       await tester.tap(moreOptions);
       await tester.pumpAndSettle();
 
-      // Tap Full Factory Reset (0x1F)
-      final resetItem = find.text('Full Factory Reset (0x1F)');
+      // Tap Full Factory Reset
+      final resetItem = find.text('Full Factory Reset');
       expect(resetItem, findsOneWidget);
       await tester.tap(resetItem);
       await tester.pumpAndSettle();
@@ -225,7 +231,7 @@ void main() {
       await tester.tap(resetItem);
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('RESET EVERYTHING (0x1F)'));
+      await tester.tap(find.text('RESET EVERYTHING'));
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pumpAndSettle();
 
@@ -275,13 +281,13 @@ void main() {
       await tester.pumpAndSettle();
       expect(mockTransport.writtenControlPointPayloads.any((p) => p.isNotEmpty && p.first == 0x0E), isTrue);
 
-      // 2. Erase Presets (0x0C)
-      final eraseIcon = find.byTooltip('Erase Presets in Firmware');
+      // 2. Erase Presets (Restore Factory Presets)
+      final eraseIcon = find.byTooltip('Restore Factory Presets');
       expect(eraseIcon, findsOneWidget);
       await tester.tap(eraseIcon);
       await tester.pumpAndSettle();
 
-      expect(find.text('Erase All Presets in Firmware?'), findsOneWidget);
+      expect(find.text('Restore Factory Presets?'), findsOneWidget);
       await tester.tap(find.text('CANCEL'));
       await tester.pumpAndSettle();
 
@@ -306,6 +312,118 @@ void main() {
       await tester.tap(find.text('DISCONNECT'));
       await tester.pumpAndSettle();
       expect(container.read(isViewingDeviceProvider), isFalse);
+    });
+
+    testWidgets('PopScope, factory reset fallbacks, erase error snackbar, and diagnostics icon', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final base = DiagnosticProfileBuilder.build('Test-Diag-V1');
+      final customProfile = DeviceProfile(
+        schemaVersion: base.schemaVersion,
+        modelNumber: base.modelNumber,
+        name: base.name,
+        description: base.description,
+        manufacturer: base.manufacturer,
+        gatt: base.gatt,
+        capabilities: base.capabilities,
+        actuators: base.actuators,
+        presets: base.presets,
+        visualizers: base.visualizers,
+        screens: const [
+          AirScreenConfig(
+            id: 's_control',
+            title: 'Control',
+            icon: 'control',
+            widgets: [],
+          ),
+          AirScreenConfig(
+            id: 's_diag',
+            title: 'Diagnostics',
+            icon: 'diagnostics',
+            widgets: [],
+          ),
+        ],
+      );
+
+      final robot = DiscoveredRobot(
+        id: 'diag-bot-1',
+        name: 'DiagBot-01',
+        rawRssi: -50,
+        smoothedRssi: -50.0,
+        isPairingMode: false,
+        lastSeen: DateTime.now(),
+      );
+
+      final inMemoryStorage = InMemoryProfileStorageService();
+      final inMemoryResolver = ProfileResolver(storageService: inMemoryStorage);
+      final container = ProviderContainer(
+        overrides: [
+          bleTransportProvider.overrideWithValue(mockTransport),
+          fleetStorageProvider.overrideWithValue(mockFleetStorage),
+          profileStorageProvider.overrideWithValue(inMemoryStorage),
+          profileResolverProvider.overrideWithValue(inMemoryResolver),
+          commandPipelineProvider.overrideWithValue(CommandPipeline(transport: mockTransport, telemetryBus: null)),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      // Connect so bleManager.connectedRobot != null (covers lines 190, 192)
+      await container.read(bleConnectionManagerProvider).connect(robot);
+      await mockFleetStorage.saveRobot(RegisteredRobot(id: 'diag-bot-1', name: 'DiagBot-01', pairedAt: DateTime.now()));
+      await mockFleetStorage.setLastConnectedRobotId('diag-bot-1');
+
+      container.read(activeProfileProvider.notifier).selectProfile(customProfile);
+      container.read(isViewingDeviceProvider.notifier).openDevice();
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            home: Navigator(
+              onGenerateRoute: (settings) => MaterialPageRoute(
+                builder: (context) => const DynamicScreenScaffold(),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 1. Verify diagnostics icon tab rendered (line 492)
+      expect(find.text('Diagnostics'), findsOneWidget);
+      await tester.tap(find.text('Diagnostics').last);
+      await tester.pumpAndSettle();
+
+      // 2. Erase Presets error SnackBar (lines 85-88)
+      mockTransport.failNextWrite = true;
+      final eraseIcon = find.byTooltip('Restore Factory Presets');
+      await tester.tap(eraseIcon);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('ERASE IN FIRMWARE'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Failed to restore factory presets:'), findsOneWidget);
+
+      // 3. Factory Reset with failNextWrite so fallback 0x1F runs (lines 177-178, 190, 192)
+      final moreOptions = find.byTooltip('More Hardware Options');
+      await tester.tap(moreOptions);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Full Factory Reset'));
+      await tester.pumpAndSettle();
+
+      mockTransport.failNextWrite = true;
+      await tester.tap(find.text('RESET EVERYTHING'));
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+
+      // 4. PopScope onPopInvokedWithResult (lines 283-288)
+      final navigatorState = tester.state<NavigatorState>(find.byType(Navigator).last);
+      navigatorState.maybePop();
+      await tester.pumpAndSettle();
     });
   });
 }

@@ -219,7 +219,7 @@ void main() {
       expect(find.text('Erase All Presets in Firmware?'), findsOneWidget);
       expect(
         find.text(
-          'This will send opcode 0x0C to Fabrica to erase all custom routine sequences from NVS flash memory and reset all button slots back to factory defaults.\n\nAre you sure you want to proceed?',
+          'This will erase all custom routine sequences from memory and reset all button presets back to factory defaults.\n\nAre you sure you want to proceed?',
         ),
         findsOneWidget,
       );

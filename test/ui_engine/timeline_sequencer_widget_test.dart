@@ -28,7 +28,7 @@ void main() {
         overrides: [
           bleTransportProvider.overrideWithValue(mockTransport),
           commandPipelineProvider.overrideWithValue(
-            CommandPipeline(transport: mockTransport),
+            CommandPipeline(transport: mockTransport, telemetryBus: null),
           ),
         ],
       );
@@ -66,7 +66,7 @@ void main() {
       expect(find.text('ADD MOTION STEP (3/16)'), findsOneWidget);
       expect(find.text('PREVIEW ON ROBOT'), findsOneWidget);
       expect(find.text('SAVE TO BUTTON'), findsOneWidget);
-      expect(find.text('SYNC FROM ROBOT (0x0B)'), findsOneWidget);
+      expect(find.text('SYNC FROM ROBOT'), findsOneWidget);
       expect(find.text('RESTORE FACTORY PRESETS'), findsOneWidget);
     });
 
@@ -99,6 +99,13 @@ void main() {
       expect(find.text('Left Flap (Ch 0) + Right Flap (Ch 1)'), findsOneWidget);
       expect(find.text('DUAL'), findsOneWidget);
       expect(find.text('ADD MOTION STEP (2/16)'), findsOneWidget);
+
+      // Open popup menu and select Adult T-Shirt Template (lines 77-80)
+      await tester.tap(find.byTooltip('Load Template'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Adult T-Shirt Template'));
+      await tester.pumpAndSettle();
+      expect(find.text('ADD MOTION STEP (3/16)'), findsOneWidget);
     });
 
     testWidgets('adds a motion step and respects routine bounds',
@@ -172,7 +179,7 @@ void main() {
       final previewPacket = payloads.first;
       expect(previewPacket[0], BleOpcode.runRawSequence.value); // 0x01
       expect(previewPacket.length, 1 + FoldRoutine.binaryLength); // 54 bytes
-      expect(find.textContaining('Preview running in RAM'), findsOneWidget);
+      expect(find.textContaining('Preview running on robot'), findsOneWidget);
     });
 
     testWidgets('SAVE TO BUTTON selects slot and writes opcode 0x0A with CRC32',
@@ -204,7 +211,7 @@ void main() {
       expect(savePacket[0], BleOpcode.setButtonSequence.value); // 0x0A
       expect(savePacket[1], 2); // Slot 2
       expect(savePacket.length, 2 + FoldRoutine.binaryLength); // 55 bytes
-      expect(find.textContaining('Programmed Button 2'), findsOneWidget);
+      expect(find.textContaining('Saved successfully to Button 2'), findsOneWidget);
     });
 
     testWidgets('RESTORE FACTORY PRESETS confirmation dispatches opcode 0x0C',
@@ -241,44 +248,120 @@ void main() {
       await tester.pumpWidget(createTestWidget());
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('SYNC FROM ROBOT (0x0B)'));
+      await tester.tap(find.text('SYNC FROM ROBOT'));
       await tester.pumpAndSettle();
 
       final payloads = mockTransport.writtenControlPointPayloads;
       expect(payloads.isNotEmpty, isTrue);
       expect(payloads.first, equals([0x0B]));
-      expect(find.textContaining('Sync requested'), findsOneWidget);
+      expect(find.textContaining('Routines synchronized successfully'), findsOneWidget);
     });
 
     testWidgets('cancels restore and flash dialogs and adds dual step', (tester) async {
-      await tester.binding.setSurfaceSize(const Size(600, 900));
+      await tester.binding.setSurfaceSize(const Size(600, 2500));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
       await tester.pumpWidget(createTestWidget());
       await tester.pumpAndSettle();
 
       // 1. Cancel restore dialog
-      await tester.tap(find.text('RESTORE FACTORY PRESETS'));
+      final restoreBtn = find.text('RESTORE FACTORY PRESETS');
+      await tester.ensureVisible(restoreBtn);
+      await tester.tap(restoreBtn);
       await tester.pumpAndSettle();
       await tester.tap(find.text('CANCEL'));
       await tester.pumpAndSettle();
 
       // 2. Cancel flash dialog
-      await tester.tap(find.text('SAVE TO BUTTON'));
+      final saveBtn = find.text('SAVE TO BUTTON');
+      await tester.ensureVisible(saveBtn);
+      await tester.tap(saveBtn);
       await tester.pumpAndSettle();
       await tester.tap(find.text('CANCEL'));
       await tester.pumpAndSettle();
 
-      // 3. Add dual flap step via dialog
-      await tester.tap(find.textContaining('ADD MOTION STEP'));
+      // 3. Add step dialog with dropdown selection, dual flap and cancel
+      final addStepBtn = find.textContaining('ADD MOTION STEP');
+      await tester.ensureVisible(addStepBtn);
+      await tester.tap(addStepBtn);
+      await tester.pumpAndSettle();
+
+      // Change flap 1 dropdown (lines 291-292)
+      await tester.tap(find.byType(DropdownButtonFormField<int>).first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Right Flap (Ch 1)').last);
       await tester.pumpAndSettle();
 
       final dualCheckbox = find.byType(CheckboxListTile);
       await tester.tap(dualCheckbox);
       await tester.pumpAndSettle();
 
+      // Change flap 2 dropdown (lines 321-322)
+      await tester.tap(find.byType(DropdownButtonFormField<int>).last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Bottom Flap (Ch 2)').last);
+      await tester.pumpAndSettle();
+
+      // Cancel add dialog (line 329)
+      await tester.tap(find.text('CANCEL'));
+      await tester.pumpAndSettle();
+
+      // Re-open and add dual step
+      await tester.ensureVisible(find.textContaining('ADD MOTION STEP'));
+      await tester.tap(find.textContaining('ADD MOTION STEP'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('ADD'));
       await tester.pumpAndSettle();
+
+      // 4. Fill up to 16 steps and test max bound error (line 50)
+      for (var i = 0; i < 12; i++) {
+        final btn = find.textContaining('ADD MOTION STEP');
+        await tester.ensureVisible(btn);
+        await tester.tap(btn);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('ADD'));
+        await tester.pumpAndSettle();
+      }
+      expect(find.text('ROUTINE FULL (16/16 STEPS)'), findsOneWidget);
+
+      // Defensive limit check (line 50)
+      (tester.state(find.byType(TimelineSequencerWidget)) as dynamic)._addStep(0);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Maximum 16 steps allowed by firmware'), findsOneWidget);
+
+      // 5. Preview error (line 115)
+      mockTransport.failNextWrite = true;
+      final previewBtn = find.text('PREVIEW ON ROBOT');
+      await tester.ensureVisible(previewBtn);
+      await tester.tap(previewBtn);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Preview dispatch error:'), findsOneWidget);
+
+      // 6. Flash commit error (line 201)
+      mockTransport.failNextWrite = true;
+      await tester.ensureVisible(saveBtn);
+      await tester.tap(saveBtn);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('COMMIT TO FLASH'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Flash commit error:'), findsOneWidget);
+
+      // 7. Restore factory presets error (line 244)
+      mockTransport.failNextWrite = true;
+      await tester.ensureVisible(restoreBtn);
+      await tester.tap(restoreBtn);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('RESTORE DEFAULTS'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Restore error:'), findsOneWidget);
+
+      // 8. Sync error (line 260)
+      mockTransport.failNextWrite = true;
+      final syncBtn = find.text('SYNC FROM ROBOT');
+      await tester.ensureVisible(syncBtn);
+      await tester.tap(syncBtn);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Sync error:'), findsOneWidget);
     });
   });
 }

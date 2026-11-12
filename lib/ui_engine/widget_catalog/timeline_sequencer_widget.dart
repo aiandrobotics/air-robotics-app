@@ -101,14 +101,14 @@ class _TimelineSequencerWidgetState
 
   Future<void> _previewOnRobot() async {
     setState(() => _isBusy = true);
-    _setStatus('Dispatching stateless preview (0x01)...');
+    _setStatus('Starting routine preview on robot...');
 
     try {
       final routine = FoldRoutine.fromSteps(_steps);
       final pipeline = ref.read(commandPipelineProvider);
       await pipeline.runRawSequence(routine);
       _setStatus(
-        'Preview running in RAM (CRC: 0x${routine.checksum.toRadixString(16).toUpperCase()})',
+        'Preview running on robot...',
         color: AppColors.emerald,
       );
     } catch (e) {
@@ -134,7 +134,7 @@ class _TimelineSequencerWidgetState
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Select physical button slot in ESP32 NVS flash to program with current sequence:',
+                    'Select a physical robot button to program with this routine:',
                     style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                   ),
                   const SizedBox(height: AppTokens.space12),
@@ -152,7 +152,7 @@ class _TimelineSequencerWidgetState
                             : AppColors.textSecondary,
                       ),
                       title: Text('Button $slot'),
-                      subtitle: Text('Slot $slot (Opcode 0x0A $slot)'),
+                      subtitle: Text('Hardware Button $slot'),
                       onTap: () {
                         setDialogState(() => selectedSlot = slot);
                       },
@@ -187,14 +187,14 @@ class _TimelineSequencerWidgetState
 
   Future<void> _commitToFlash(int slot) async {
     setState(() => _isBusy = true);
-    _setStatus('Flashing Button $slot in NVS...');
+    _setStatus('Saving routine to Button $slot...');
 
     try {
       final routine = FoldRoutine.fromSteps(_steps);
       final pipeline = ref.read(commandPipelineProvider);
       await pipeline.setButtonSequence(slot, routine);
       _setStatus(
-        'OK: Programmed Button $slot (CRC32: 0x${routine.checksum.toRadixString(16).toUpperCase()})',
+        'Saved successfully to Button $slot',
         color: AppColors.emerald,
       );
     } catch (e) {
@@ -212,7 +212,7 @@ class _TimelineSequencerWidgetState
           backgroundColor: AppColors.surface,
           title: const Text('Restore Factory Presets?'),
           content: const Text(
-            'This will reset all 4 physical button routines in NVS flash back to factory defaults.',
+            'This will reset all 4 physical button routines back to factory defaults.',
           ),
           actions: [
             TextButton(
@@ -234,11 +234,11 @@ class _TimelineSequencerWidgetState
 
     if (confirmed == true) {
       setState(() => _isBusy = true);
-      _setStatus('Restoring factory presets (0x0C)...');
+      _setStatus('Restoring factory presets...');
       try {
         final pipeline = ref.read(commandPipelineProvider);
         await pipeline.restoreFactoryPresets();
-        _setStatus('OK: Factory presets restored successfully',
+        _setStatus('Factory presets restored successfully',
             color: AppColors.emerald);
       } catch (e) {
         _setStatus('Restore error: $e', color: AppColors.crimson);
@@ -250,11 +250,11 @@ class _TimelineSequencerWidgetState
 
   Future<void> _syncFromRobot() async {
     setState(() => _isBusy = true);
-    _setStatus('Requesting sequence sync (0x0B)...');
+    _setStatus('Syncing routines from robot...');
     try {
       final pipeline = ref.read(commandPipelineProvider);
       await pipeline.getButtonConfig();
-      _setStatus('Sync requested: FAB3 212-byte table emitted',
+      _setStatus('Routines synchronized successfully',
           color: AppColors.emerald);
     } catch (e) {
       _setStatus('Sync error: $e', color: AppColors.crimson);
@@ -575,7 +575,7 @@ class _TimelineSequencerWidgetState
                   ),
                   icon: const Icon(Icons.sync, size: 16),
                   label: const Text(
-                    'SYNC FROM ROBOT (0x0B)',
+                    'SYNC FROM ROBOT',
                     style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
                   ),
                   onPressed: _isBusy ? null : _syncFromRobot,

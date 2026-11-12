@@ -137,7 +137,7 @@ void main() {
       expect(find.text('LED: ESTOP'), findsOneWidget);
       expect(find.text('I2C FAULT'), findsOneWidget);
       expect(find.text('E-STOP LATCHED'), findsOneWidget);
-      expect(find.text('NVS STORAGE FAULT'), findsNothing);
+      expect(find.text('STORAGE FAULT'), findsNothing);
     });
 
     testWidgets('renders NVS storage fault, calibrating state, and various LED/RSSI ranges', (tester) async {
@@ -178,7 +178,7 @@ void main() {
 
       expect(find.text('CALIBRATING'), findsOneWidget);
       expect(find.text('LED: PAIRING'), findsOneWidget);
-      expect(find.text('NVS STORAGE FAULT'), findsOneWidget);
+      expect(find.text('STORAGE FAULT'), findsOneWidget);
       expect(find.text('-72 dBm'), findsOneWidget);
     });
 

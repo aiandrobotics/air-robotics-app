@@ -148,6 +148,12 @@ void main() {
       await pipeline.factoryResetAll();
       expect(mockTransport.writtenControlPointPayloads.last, equals([0x1F]));
 
+      // 8b. Factory reset fallback to write without response when standard write throws (line 181)
+      mockTransport.failNextWrite = true;
+      await pipeline.factoryResetAll();
+      expect(mockTransport.writtenControlPointPayloads.last, equals([0x1F]));
+      expect(mockTransport.writtenControlPointNoResponse.last, isTrue);
+
       // 9. Jog motor with response (withoutResponse = false)
       final fJogWithResponse = pipeline.jogMotor(channel: 2, angleDeg: 45, withoutResponse: false);
       telemetryBus.ingestBytes(makeAckPacket().toBytes());

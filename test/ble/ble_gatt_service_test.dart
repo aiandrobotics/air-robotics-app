@@ -94,5 +94,25 @@ void main() {
       final stream = transport.subscribeTelemetry();
       expect(stream, isNotNull);
     });
+
+    test('BleTransport default subscribeTelemetry implementation', () {
+      final defaultTransport = _DefaultInterfaceTransport();
+      final stream = defaultTransport.subscribeTelemetry();
+      expect(stream, isNotNull);
+      expect(defaultTransport.requestedUuid, equals(BleUuids.charTelemetryStream));
+    });
   });
+}
+
+class _DefaultInterfaceTransport extends BleTransport {
+  String? requestedUuid;
+
+  @override
+  Stream<Uint8List> subscribeCharacteristic(String characteristicUuid) {
+    requestedUuid = characteristicUuid;
+    return Stream.value(Uint8List(0));
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

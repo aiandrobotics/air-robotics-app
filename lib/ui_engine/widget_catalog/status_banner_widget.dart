@@ -150,7 +150,7 @@ class StatusBannerWidget extends ConsumerWidget {
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text('Flashing robot LED for 3s (Opcode 0x0E)...'),
+                                  content: Text('Flashing robot LED for 3 seconds...'),
                                   duration: Duration(seconds: 2),
                                   backgroundColor: AppColors.purple,
                                 ),
@@ -233,7 +233,7 @@ class StatusBannerWidget extends ConsumerWidget {
                       ),
                     if (errorCode & TelemetryPacket.faultBitNvs != 0)
                       const Text(
-                        'NVS STORAGE FAULT',
+                        'STORAGE FAULT',
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,

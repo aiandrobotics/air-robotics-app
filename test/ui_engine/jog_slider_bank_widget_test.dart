@@ -155,8 +155,8 @@ void main() {
         equals([0x0D, 0x00, 0x00]),
       );
 
-      // Tap HOME ALL (0x02) button
-      final homeAllBtn = find.text('HOME ALL (0x02)');
+      // Tap HOME ALL button
+      final homeAllBtn = find.text('HOME ALL');
       expect(homeAllBtn, findsOneWidget);
       await tester.tap(homeAllBtn);
       await tester.pumpAndSettle();

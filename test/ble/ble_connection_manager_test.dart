@@ -1,6 +1,7 @@
 import 'package:air_robotics_app/core/ble/ble_connection_manager.dart';
 import 'package:air_robotics_app/core/ble/ble_providers.dart';
 import 'package:air_robotics_app/core/ble/ble_transport_interface.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -175,6 +176,45 @@ void main() {
 
       viewingNotifier.closeDevice();
       expect(container.read(isViewingDeviceProvider), isFalse);
+    });
+
+    test('auto-reconnect timer triggers connect on target robot and handles manualDisconnect', () {
+      fakeAsync((async) {
+        final robot = DiscoveredRobot(
+          id: 'dev_retry',
+          name: 'Fabrica-Retry',
+          rawRssi: -50,
+          smoothedRssi: -50.0,
+          isPairingMode: false,
+          lastSeen: DateTime.now(),
+        );
+
+        // 1. connect fails with manualDisconnect=true during flight -> line 97 hit
+        transport.failNextConnect = true;
+        final connectFuture = manager.connect(robot);
+        manager.disconnect(); // sets _manualDisconnect = true while connect is in flight
+        expect(connectFuture, throwsStateError);
+        async.flushMicrotasks();
+        expect(manager.currentState, BleConnectionState.disconnected);
+
+        // 2. test reconnect timer executing connect -> lines 153 & 155 hit
+        manager.resetManualDisconnect();
+        transport.failNextConnect = true;
+        expect(() => manager.connect(robot), throwsStateError);
+        async.flushMicrotasks();
+        expect(manager.currentState, BleConnectionState.reconnecting);
+
+        transport.failNextConnect = false;
+        async.elapse(const Duration(milliseconds: 1500));
+        async.flushMicrotasks();
+        expect(manager.currentState, BleConnectionState.ready);
+
+        // 3. test reconnect timer with manualDisconnect cancelled midway -> line 153 early return
+        transport.simulateUnexpectedDisconnection();
+        async.flushMicrotasks();
+        manager.disconnect(); // sets manual disconnect while timer is pending
+        async.elapse(const Duration(milliseconds: 1500));
+      });
     });
   });
 }

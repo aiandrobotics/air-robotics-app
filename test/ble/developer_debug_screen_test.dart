@@ -3,7 +3,9 @@ import 'package:air_robotics_app/core/ble/ble_transport_interface.dart';
 import 'package:air_robotics_app/core/ble/developer_debug_screen.dart';
 import 'package:air_robotics_app/core/profile/profile_providers.dart';
 import 'package:air_robotics_app/core/profile/profile_storage_service.dart';
+import 'package:air_robotics_app/core/protocol/command_pipeline.dart';
 import 'package:air_robotics_app/core/protocol/protocol_providers.dart';
+import 'package:air_robotics_app/core/protocol/telemetry_bus.dart';
 import 'package:air_robotics_app/core/protocol/telemetry_packet.dart';
 import 'package:air_robotics_app/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
@@ -278,6 +280,133 @@ void main() {
         await tester.tap(disconnectBtn);
         await tester.pumpAndSettle();
       }
+    });
+
+    testWidgets('DeveloperDebugScreen error paths, appBar scan toggles, multiple candidates and fast telemetry', (tester) async {
+      tester.view.physicalSize = const Size(800, 2000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final metricsWithFastFreq = TelemetryMetrics(
+        totalPackets: 100,
+        droppedPackets: 0,
+        dropRatePercent: 0.0,
+        frequencyHz: 10.0,
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          bleTransportProvider.overrideWithValue(mockTransport),
+          commandPipelineProvider.overrideWithValue(CommandPipeline(transport: mockTransport, telemetryBus: null)),
+          profileStorageProvider.overrideWithValue(InMemoryProfileStorageService()),
+          telemetryMetricsProvider.overrideWith((ref) => Stream.value(metricsWithFastFreq)),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            theme: AppTheme.darkTheme,
+            home: const DeveloperDebugScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 1. AppBar scan toggle: start scan (lines 129-130)
+      final appBarScanBtn = find.byTooltip('Scan for Robots');
+      expect(appBarScanBtn, findsOneWidget);
+      await tester.tap(appBarScanBtn);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Scanning for Fabrica-*'), findsOneWidget);
+
+      // AppBar scan toggle: stop scan (lines 126-127)
+      final appBarStopScanBtn = find.byTooltip('Stop Scan');
+      expect(appBarStopScanBtn, findsOneWidget);
+      await tester.tap(appBarStopScanBtn);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Scan stopped'), findsOneWidget);
+
+      // 2. Multiple candidates in list to trigger separatorBuilder (line 310)
+      final r1 = DiscoveredRobot(
+        id: 'r1',
+        name: 'Fabrica-1',
+        rawRssi: -50,
+        smoothedRssi: -50.0,
+        isPairingMode: true,
+        lastSeen: DateTime.now(),
+      );
+      final r2 = DiscoveredRobot(
+        id: 'r2',
+        name: 'Fabrica-2',
+        rawRssi: -70,
+        smoothedRssi: -70.0,
+        isPairingMode: false,
+        lastSeen: DateTime.now(),
+      );
+      mockTransport.emitDiscoveredRobots([r1, r2]);
+      await tester.pumpAndSettle();
+      expect(find.text('Fabrica-1'), findsOneWidget);
+      expect(find.text('Fabrica-2'), findsOneWidget);
+
+      // 3. Connect error (line 370)
+      mockTransport.failNextConnect = true;
+      final connectBtn = find.widgetWithText(ElevatedButton, 'CONNECT').first;
+      await tester.ensureVisible(connectBtn);
+      await tester.tap(connectBtn);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Connection error:'), findsOneWidget);
+
+      // 4. Hex dispatch error (line 91)
+      mockTransport.failNextWrite = true;
+      final textField = find.byType(TextField);
+      await tester.ensureVisible(textField);
+      await tester.enterText(textField, '02');
+      final sendButton = find.widgetWithText(ElevatedButton, 'SEND');
+      await tester.ensureVisible(sendButton);
+      await tester.tap(sendButton);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('ERR: Dispatch failed:'), findsOneWidget);
+
+      // 5. Emergency stop error (line 427)
+      mockTransport.failNextWrite = true;
+      final estopBtn = find.text('EMERGENCY STOP');
+      await tester.ensureVisible(estopBtn);
+      await tester.tap(estopBtn);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('ERR: E-Stop failed:'), findsOneWidget);
+
+      // 6. Stop error (line 451)
+      mockTransport.failNextWrite = true;
+      final stopBtn = find.text('STOP');
+      await tester.ensureVisible(stopBtn);
+      await tester.tap(stopBtn);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('ERR: Stop failed:'), findsOneWidget);
+
+      // 7. Preset 1 error (line 471)
+      mockTransport.failNextWrite = true;
+      final p1Btn = find.text('RUN PRESET 1');
+      await tester.ensureVisible(p1Btn);
+      await tester.tap(p1Btn);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('ERR: Preset 1 failed:'), findsOneWidget);
+
+      // 8. Identify error (line 493)
+      mockTransport.failNextWrite = true;
+      final idBtn = find.text('IDENTIFY');
+      await tester.ensureVisible(idBtn);
+      await tester.tap(idBtn);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('ERR: Identify failed:'), findsOneWidget);
+
+      // 9. Frequency >= 5.0 Hz badge is rendered (line 535)
+      expect(find.textContaining('10.0 Hz'), findsOneWidget);
     });
   });
 }

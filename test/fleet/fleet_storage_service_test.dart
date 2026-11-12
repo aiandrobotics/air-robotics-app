@@ -166,9 +166,37 @@ void main() {
       expect(r1.hashCode, equals(r2.hashCode));
       expect(r1 == r3, isFalse);
     });
+
+    test('copyWith preserves customNickname when omitted', () {
+      final r = RegisteredRobot(id: '1', name: 'Orig', pairedAt: DateTime.now(), customNickname: 'Nick');
+      final copy = r.copyWith(name: 'NewName');
+      expect(copy.customNickname, equals('Nick'));
+    });
   });
 
   group('RegisteredRobotsNotifier & fleetStorageProvider Tests', () {
+    test('fleetStorageProvider default factory creates and disposes HiveFleetStorageService', () {
+      final container = ProviderContainer();
+      final storage = container.read(fleetStorageProvider);
+      expect(storage, isA<HiveFleetStorageService>());
+      container.dispose();
+    });
+
+    test('HiveFleetStorageService opens box lazily via _getBox and handles error gracefully', () async {
+      final storage = HiveFleetStorageService();
+      addTearDown(() => storage.close());
+
+      final r = RegisteredRobot(id: 'lazy-1', name: 'Lazy 1', pairedAt: DateTime.now());
+      await storage.saveRobot(r);
+      final list = await storage.getRegisteredRobots();
+      expect(list.length, equals(1));
+      expect(list.first.id, equals('lazy-1'));
+
+      // Test error fallback line 59 in getRegisteredRobots using a failing box
+      final failingStorage = HiveFleetStorageService(box: _FailingBox());
+      final emptyList = await failingStorage.getRegisteredRobots();
+      expect(emptyList, isEmpty);
+    });
     test('Notifier adds, renames, and removes robots in state', () async {
       final inMemory = InMemoryFleetStorageService();
       final container = ProviderContainer(
@@ -195,4 +223,12 @@ void main() {
       expect(robots, isEmpty);
     });
   });
+}
+
+class _FailingBox extends Fake implements Box<String> {
+  @override
+  bool get isOpen => true;
+
+  @override
+  Map<dynamic, String> toMap() => throw Exception('Corrupt DB');
 }

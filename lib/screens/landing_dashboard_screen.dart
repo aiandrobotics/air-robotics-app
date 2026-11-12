@@ -250,11 +250,11 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
           ],
         ),
         content: Text(
-          'This will send opcode 0x1F to ${robot.displayName}:\n\n'
-          '• Wipes all custom routines in flash & restores factory defaults.\n'
-          '• Homes all 16 flap servos to 0°.\n'
-          '• Erases all bonded phone encryption keys from flash.\n'
-          '• Terminates Bluetooth link and restarts indefinite pairing mode.\n\n'
+          'This will reset ${robot.displayName} to factory defaults:\n\n'
+          '• Wipes all custom routines in memory & restores factory defaults.\n'
+          '• Returns all flaps flat to home position (0°).\n'
+          '• Clears saved Bluetooth pairing keys.\n'
+          '• Disconnects Bluetooth and restarts pairing mode.\n\n'
           'The robot will be removed from Your Devices on this phone.',
           style: const TextStyle(
             color: AppColors.textSecondary,
@@ -276,7 +276,7 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
               Navigator.of(dialogContext).pop();
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('Executing Full Factory Reset (0x1F) on ${robot.displayName}...'),
+                  content: Text('Executing Full Factory Reset on ${robot.displayName}...'),
                   backgroundColor: AppColors.crimson,
                 ),
               );
@@ -287,7 +287,7 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
               final robotsNotifier = ref.read(registeredRobotsProvider.notifier);
               final bleManager = ref.read(bleConnectionManagerProvider);
 
-              // 1. Dispatch opcode 0x1F to firmware FIRST while link and security bond are alive
+              // 1. Dispatch factory reset opcode to firmware FIRST while link and security bond are alive
               try {
                 await commandPipeline.factoryResetAll();
               } catch (_) {
@@ -316,7 +316,7 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
                 await bleManager.disconnect();
               } catch (_) {}
             },
-            child: const Text('RESET EVERYTHING (0x1F)'),
+            child: const Text('RESET EVERYTHING'),
           ),
         ],
       ),
@@ -333,7 +333,7 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         content: Text(
-          'This will remove ${robot.displayName} (${robot.id}) from Your Devices. You can re-add it at any time.\n\nNote: To completely wipe robot flash and restore factory defaults, use "Factory Reset (0x1F)".',
+          'This will remove ${robot.displayName} from Your Devices on this phone. You can re-add it at any time.\n\nNote: To completely wipe robot memory and restore factory defaults, use "Factory Reset".',
           style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
         ),
         actions: [
@@ -929,7 +929,7 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
                         Icon(Icons.warning_amber_rounded, size: 16, color: AppColors.crimson),
                         SizedBox(width: 8),
                         Flexible(
-                          child: Text('Factory Reset (0x1F)', style: TextStyle(fontSize: 13, color: AppColors.crimson)),
+                          child: Text('Factory Reset', style: TextStyle(fontSize: 13, color: AppColors.crimson)),
                         ),
                       ],
                     ),

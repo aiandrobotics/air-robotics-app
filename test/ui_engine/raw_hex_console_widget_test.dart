@@ -1,5 +1,6 @@
 import 'package:air_robotics_app/core/ble/ble_providers.dart';
 import 'package:air_robotics_app/core/profile/device_profile.dart';
+import 'package:air_robotics_app/core/protocol/command_pipeline.dart';
 import 'package:air_robotics_app/core/protocol/protocol_providers.dart';
 import 'package:air_robotics_app/core/protocol/telemetry_bus.dart';
 import 'package:air_robotics_app/core/protocol/telemetry_packet.dart';
@@ -97,16 +98,16 @@ void main() {
       expect(find.textContaining('RX #00042'), findsOneWidget);
 
       // Verify DIS metadata card
-      expect(find.text('DEVICE INFORMATION SERVICE (DIS 0x180A)'), findsOneWidget);
+      expect(find.text('DEVICE INFORMATION'), findsOneWidget);
       expect(find.text('Fabrica-DevKit-v1'), findsOneWidget);
       expect(find.text('v1.13.0'), findsOneWidget);
       expect(find.text('AIR Robotics'), findsOneWidget);
 
       // Verify quick diagnostic action chips
-      expect(find.text('SNAPSHOT (0x10)'), findsOneWidget);
-      expect(find.text('PAUSE STREAM (0x11)'), findsOneWidget);
-      expect(find.text('IDENTIFY (0x0E)'), findsOneWidget);
-      expect(find.text('GET CONFIG (0x0B)'), findsOneWidget);
+      expect(find.text('SNAPSHOT'), findsOneWidget);
+      expect(find.text('PAUSE STREAM'), findsOneWidget);
+      expect(find.text('IDENTIFY'), findsOneWidget);
+      expect(find.text('SYNC ROUTINES'), findsOneWidget);
 
       // Enter hex opcode 0E (Identify)
       final textField = find.byType(TextField);
@@ -141,16 +142,16 @@ void main() {
       expect(mockTransport.writtenControlPointNoResponse.last, isTrue);
 
       // Tap quick action chips: Snapshot, Stream toggle, Identify, Get config
-      await tester.tap(find.text('SNAPSHOT (0x10)'));
+      await tester.tap(find.text('SNAPSHOT'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('PAUSE STREAM (0x11)'));
+      await tester.tap(find.text('PAUSE STREAM'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('IDENTIFY (0x0E)'));
+      await tester.tap(find.text('IDENTIFY'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('GET CONFIG (0x0B)'));
+      await tester.tap(find.text('SYNC ROUTINES'));
       await tester.pumpAndSettle();
 
       // Test odd hex string error
@@ -163,6 +164,69 @@ void main() {
       final clearBtn = find.widgetWithText(TextButton, 'CLEAR');
       await tester.tap(clearBtn);
       await tester.pumpAndSettle();
+    });
+
+    testWidgets('RawHexConsoleWidget buffer overflow, onSubmitted, and error dispatches', (tester) async {
+      final container = ProviderContainer(
+        overrides: [
+          bleTransportProvider.overrideWithValue(mockTransport),
+          commandPipelineProvider.overrideWithValue(CommandPipeline(transport: mockTransport, telemetryBus: null)),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: Scaffold(
+              body: RawHexConsoleWidget(
+                config: AirWidgetConfig(
+                  type: 'raw-hex-console',
+                  props: {'buffer_size': 2},
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final textField = find.byType(TextField);
+
+      // 1. Enter hex and submit via onSubmitted (line 405)
+      await tester.enterText(textField, '02');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('TX -> FAB1: [02]'), findsOneWidget);
+
+      // 2. Buffer size truncation (line 43): send 3 more messages so buffer_size (2) is exceeded
+      await tester.enterText(textField, '03');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pumpAndSettle();
+      await tester.enterText(textField, '04');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pumpAndSettle();
+
+      // 3. Dispatch failure catch block (line 86)
+      mockTransport.failNextWrite = true;
+      final sendButton = find.widgetWithText(ElevatedButton, 'SEND');
+      await tester.enterText(textField, '0E');
+      await tester.tap(sendButton);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('ERR: Dispatch failed:'), findsOneWidget);
+
+      // 4. Stream toggle success (line 299)
+      final streamChip = find.text('PAUSE STREAM');
+      await tester.tap(streamChip);
+      await tester.pumpAndSettle();
+
+      // 5. Identify failure catch block (line 313)
+      mockTransport.failNextWrite = true;
+      final identifyChip = find.text('IDENTIFY');
+      await tester.tap(identifyChip);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('ERR: Identify failed:'), findsOneWidget);
     });
   });
 }

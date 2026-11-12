@@ -31,7 +31,7 @@ class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
   void _confirmErasePresets(BuildContext context) {
     showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         backgroundColor: AppColors.surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppTokens.radiusLg),
@@ -43,19 +43,19 @@ class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
             SizedBox(width: 8),
             Expanded(
               child: Text(
-                'Erase All Presets in Firmware?',
+                'Restore Factory Presets?',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),
           ],
         ),
         content: const Text(
-          'This will send opcode 0x0C to Fabrica to erase all custom routine sequences from NVS flash memory and reset all button slots back to factory defaults.\n\nAre you sure you want to proceed?',
+          'This will erase all custom routine sequences from memory and reset all button presets back to factory defaults.\n\nAre you sure you want to proceed?',
           style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text('CANCEL', style: TextStyle(color: AppColors.textSecondary)),
           ),
           ElevatedButton(
@@ -64,28 +64,24 @@ class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
               foregroundColor: Colors.white,
             ),
             onPressed: () async {
-              Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Erasing presets in firmware (0x0C)...'),
-                  duration: Duration(seconds: 1),
-                ),
-              );
+              Navigator.of(dialogContext).pop();
               try {
                 await ref.read(commandPipelineProvider).restoreFactoryPresets();
                 if (context.mounted) {
+                  ScaffoldMessenger.of(context).clearSnackBars();
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('All presets successfully erased and restored to factory defaults.'),
+                      content: Text('All presets successfully restored to factory defaults.'),
                       backgroundColor: AppColors.emerald,
                     ),
                   );
                 }
               } catch (e) {
                 if (context.mounted) {
+                  ScaffoldMessenger.of(context).clearSnackBars();
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Failed to erase presets in firmware: $e'),
+                      content: Text('Failed to restore factory presets: $e'),
                       backgroundColor: AppColors.crimson,
                     ),
                   );
@@ -134,11 +130,11 @@ class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
           ],
         ),
         content: const Text(
-          'This will send opcode 0x1F to Fabrica:\n\n'
-          '• Wipes all custom routines in flash & restores factory defaults.\n'
-          '• Homes all 16 flap servos to 0°.\n'
-          '• Erases all bonded phone encryption keys from flash.\n'
-          '• Terminates Bluetooth link and restarts indefinite pairing mode.\n\n'
+          'This will reset Fabrica to factory defaults:\n\n'
+          '• Wipes all custom routines in memory & restores factory defaults.\n'
+          '• Returns all flaps flat to home position (0°).\n'
+          '• Clears saved Bluetooth pairing keys.\n'
+          '• Disconnects Bluetooth and restarts pairing mode.\n\n'
           'The robot will be removed from Your Devices on this phone.',
           style: TextStyle(
             color: AppColors.textSecondary,
@@ -160,7 +156,7 @@ class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
               Navigator.of(dialogContext).pop();
               scaffoldMessenger.showSnackBar(
                 const SnackBar(
-                  content: Text('Executing Full Factory Reset (0x1F)...'),
+                  content: Text('Executing Full Factory Reset...'),
                   backgroundColor: AppColors.crimson,
                 ),
               );
@@ -169,7 +165,7 @@ class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
               String? robotId = bleManager.connectedRobot?.id;
               robotId ??= await fleetStorage.getLastConnectedRobotId();
 
-              // 2. Dispatch opcode 0x1F to firmware FIRST while link and security bond are alive!
+              // 2. Dispatch factory reset opcode to firmware FIRST while link and security bond are alive!
               try {
                 await commandPipeline.factoryResetAll();
               } catch (_) {
@@ -209,7 +205,7 @@ class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
               } catch (_) {}
               viewingNotifier.closeDevice();
             },
-            child: const Text('RESET EVERYTHING (0x1F)'),
+            child: const Text('RESET EVERYTHING'),
           ),
         ],
       ),
@@ -352,7 +348,7 @@ class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Flashing robot LED for 3s (Opcode 0x0E)...'),
+                        content: Text('Flashing robot LED for 3 seconds...'),
                         duration: Duration(seconds: 2),
                         backgroundColor: AppColors.purple,
                       ),
@@ -365,7 +361,7 @@ class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
               visualDensity: VisualDensity.compact,
               padding: const EdgeInsets.symmetric(horizontal: 4),
               icon: const Icon(Icons.delete_sweep, size: 20, color: AppColors.crimson),
-              tooltip: 'Erase Presets in Firmware',
+              tooltip: 'Restore Factory Presets',
               onPressed: () => _confirmErasePresets(context),
             ),
             IconButton(
@@ -379,7 +375,7 @@ class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
               visualDensity: VisualDensity.compact,
               padding: const EdgeInsets.symmetric(horizontal: 4),
               icon: const Icon(Icons.bug_report, size: 20),
-              tooltip: 'BLE Hardware Debugger',
+              tooltip: 'Hardware Debugger',
               onPressed: () {
                 Navigator.of(context).push(
                   MaterialPageRoute<void>(
@@ -408,7 +404,7 @@ class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
                       SizedBox(width: 8),
                       Flexible(
                         child: Text(
-                          'Full Factory Reset (0x1F)',
+                          'Full Factory Reset',
                           style: TextStyle(color: AppColors.crimson),
                         ),
                       ),

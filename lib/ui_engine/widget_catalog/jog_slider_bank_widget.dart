@@ -103,7 +103,7 @@ class _JogSliderBankWidgetState extends ConsumerState<JogSliderBankWidget> {
               ),
               icon: const Icon(Icons.home, size: 14),
               label: const Text(
-                'HOME ALL (0x02)',
+                'HOME ALL',
                 style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
               ),
               onPressed: () async {

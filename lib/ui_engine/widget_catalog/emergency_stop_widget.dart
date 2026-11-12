@@ -114,7 +114,7 @@ class _EmergencyStopWidgetState extends ConsumerState<EmergencyStopWidget> {
             ),
             const SizedBox(height: 6),
             const Text(
-              'Dispatches 0x02 to clear firmware E-Stop latch and return to IDLE',
+              'Resets emergency stop and returns robot to Idle',
               style: TextStyle(fontSize: 10, color: AppColors.amber),
             ),
           ],

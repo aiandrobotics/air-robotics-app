@@ -102,5 +102,12 @@ void main() {
       expect(retrieved[1], equals(15));
       expect(retrieved[2], equals(2));
     });
+
+    test('returns empty list if profile box fails to open', () async {
+      await Hive.close();
+      final brokenStorage = HiveProfileStorageService();
+      final models = await brokenStorage.listStoredModels();
+      expect(models, isEmpty);
+    });
   });
 }

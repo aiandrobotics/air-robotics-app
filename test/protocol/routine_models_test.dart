@@ -116,6 +116,9 @@ void main() {
 
       final alias = FoldRoutine.fromSteps([FoldStep.single(1)]);
       expect(alias.stepCount, equals(1));
+
+      expect(() => FoldRoutine.fromBytes(Uint8List(52)), throwsArgumentError);
+      expect(() => FoldRoutine.fromBytes(Uint8List(54)), throwsArgumentError);
     });
   });
 

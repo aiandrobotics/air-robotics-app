@@ -132,7 +132,7 @@ class PresetGridWidget extends ConsumerWidget {
             ],
           ),
           content: const Text(
-            'This will send opcode 0x0C to Fabrica to erase all custom routine sequences from NVS flash memory and reset all button slots back to factory defaults.\n\nAre you sure you want to proceed?',
+            'This will erase all custom routine sequences from memory and reset all button presets back to factory defaults.\n\nAre you sure you want to proceed?',
             style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
           ),
           actions: [
@@ -156,7 +156,7 @@ class PresetGridWidget extends ConsumerWidget {
     if (confirmed == true && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Erasing presets in firmware (0x0C)...'),
+          content: Text('Restoring factory presets...'),
           duration: Duration(seconds: 1),
         ),
       );

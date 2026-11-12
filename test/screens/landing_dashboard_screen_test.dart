@@ -201,7 +201,7 @@ void main() {
 
       expect(find.text('Disconnect'), findsOneWidget);
       expect(find.text('Rename'), findsOneWidget);
-      expect(find.text('Factory Reset (0x1F)'), findsOneWidget);
+      expect(find.text('Factory Reset'), findsOneWidget);
       expect(find.text('Unpair'), findsOneWidget);
 
       // Test Rename
@@ -214,10 +214,10 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Bedroom Folder'), findsOneWidget);
 
-      // Test Factory Reset (0x1F)
+      // Test Factory Reset
       await tester.tap(find.byIcon(Icons.more_vert));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Factory Reset (0x1F)'));
+      await tester.tap(find.text('Factory Reset'));
       await tester.pumpAndSettle();
 
       expect(find.text('Full Hardware Factory Reset?'), findsOneWidget);
@@ -226,9 +226,9 @@ void main() {
 
       await tester.tap(find.byIcon(Icons.more_vert));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Factory Reset (0x1F)'));
+      await tester.tap(find.text('Factory Reset'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('RESET EVERYTHING (0x1F)'));
+      await tester.tap(find.text('RESET EVERYTHING'));
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pumpAndSettle();
 

@@ -138,19 +138,25 @@ void main() {
     });
 
     test('TelemetryMetrics copyWith and toString', () {
-      const metrics = TelemetryMetrics(totalPackets: 10, droppedPackets: 1, dropRatePercent: 10.0, frequencyHz: 20.0);
+      final now = DateTime.now();
+      final metrics = TelemetryMetrics(totalPackets: 10, droppedPackets: 1, dropRatePercent: 10.0, frequencyHz: 20.0, lastPacketTime: now);
       expect(metrics.toString(), contains('total: 10'));
 
-      final copy = metrics.copyWith(totalPackets: 15);
-      expect(copy.totalPackets, equals(15));
-      expect(copy.droppedPackets, equals(1));
+      final copy1 = metrics.copyWith(totalPackets: 15);
+      expect(copy1.totalPackets, equals(15));
+      expect(copy1.droppedPackets, equals(1));
+
+      final copy2 = metrics.copyWith(droppedPackets: 5);
+      expect(copy2.totalPackets, equals(10));
+      expect(copy2.droppedPackets, equals(5));
     });
 
-    test('TelemetryBus handles error on transport subscription gracefully', () {
+    test('TelemetryBus handles error on transport subscription gracefully', () async {
       final errorTransport = MockBleTransport();
       final errorBus = TelemetryBus(transport: errorTransport);
       errorBus.start();
       errorTransport.emitTelemetryError(Exception('BLE radio error'));
+      await pumpEventQueue();
       errorBus.dispose();
       errorTransport.dispose();
     });
