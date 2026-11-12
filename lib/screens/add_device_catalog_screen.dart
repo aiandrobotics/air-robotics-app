@@ -26,10 +26,7 @@ class _AddDeviceCatalogScreenState extends ConsumerState<AddDeviceCatalogScreen>
 
     // Auto-start continuous scan on screen entry if not already scanning
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final isScanning = ref.read(isScanningProvider).value ?? false;
-      if (!isScanning) {
-        ref.read(bleScannerProvider).startScan(timeout: const Duration(seconds: 45));
-      }
+      ref.read(bleScannerProvider).startScan();
     });
   }
 
@@ -50,18 +47,6 @@ class _AddDeviceCatalogScreenState extends ConsumerState<AddDeviceCatalogScreen>
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<AsyncValue<bool>>(isScanningProvider, (prev, next) {
-      final isScanning = next.value ?? false;
-
-      // Keep discovery running continuously in the background on this screen
-      if (!isScanning && mounted && (ModalRoute.of(context)?.isCurrent ?? false)) {
-        Future.delayed(const Duration(milliseconds: 500), () {
-          if (!mounted) return;
-          ref.read(bleScannerProvider).startScan(timeout: const Duration(seconds: 45));
-        });
-      }
-    });
-
     final registeredAsync = ref.watch(registeredRobotsProvider);
     final registeredList = registeredAsync.value ?? [];
     final registeredIds = registeredList.map((r) => r.id).toSet();

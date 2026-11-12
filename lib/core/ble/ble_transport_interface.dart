@@ -129,7 +129,7 @@ abstract class BleTransport {
   DiscoveredRobot? get connectedRobot;
 
   Future<void> startScan({
-    Duration timeout = const Duration(seconds: 15),
+    Duration? timeout,
     List<String> namePrefixes = const ['Fabrica-', 'AIR-'],
   });
 

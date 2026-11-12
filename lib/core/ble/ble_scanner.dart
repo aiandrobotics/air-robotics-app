@@ -58,10 +58,15 @@ class BleScanner {
 
   Stream<bool> get isScanningStream => transport.isScanningStream;
 
-  Future<void> startScan({Duration timeout = const Duration(seconds: 15)}) async {
-    _discoveredMap.clear();
-    _smoothers.clear();
-    _robotsController.add([]);
+  Future<void> startScan({
+    Duration? timeout,
+    bool clearExisting = false,
+  }) async {
+    if (clearExisting) {
+      _discoveredMap.clear();
+      _smoothers.clear();
+      _robotsController.add([]);
+    }
     await transport.startScan(
       timeout: timeout,
       namePrefixes: allowedPrefixes,
@@ -99,6 +104,11 @@ class BleScanner {
         lastSeen: now,
       );
     }
+
+    // Prune devices not seen in the last 30 seconds
+    _discoveredMap.removeWhere((id, robot) {
+      return now.difference(robot.lastSeen).inSeconds > 30;
+    });
 
     _robotsController.add(_sortedRobots());
   }

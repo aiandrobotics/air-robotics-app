@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 import 'ble_transport_interface.dart';
@@ -43,9 +43,12 @@ class FlutterBluePlusTransport implements BleTransport {
 
   @override
   Future<void> startScan({
-    Duration timeout = const Duration(seconds: 15),
+    Duration? timeout,
     List<String> namePrefixes = const ['Fabrica-', 'AIR-'],
   }) async {
+    if (FlutterBluePlus.isScanningNow) {
+      return;
+    }
     if (_connectionState == BleConnectionState.disconnected) {
       _updateConnectionState(BleConnectionState.scanning);
     }
@@ -53,6 +56,7 @@ class FlutterBluePlusTransport implements BleTransport {
     await FlutterBluePlus.startScan(
       timeout: timeout,
       androidUsesFineLocation: false,
+      continuousUpdates: true,
     );
   }
 
@@ -104,12 +108,22 @@ class FlutterBluePlusTransport implements BleTransport {
     if (_activeDevice == null) {
       throw StateError('Cannot request MTU without active BLE connection');
     }
+    // iOS/macOS handle MTU negotiation automatically via CoreBluetooth.
+    // Calling requestMtu on iOS throws FlutterBluePlusException (android-only).
+    if (defaultTargetPlatform != TargetPlatform.android) {
+      return _activeDevice!.mtuNow;
+    }
     return await _activeDevice!.requestMtu(desiredMtu);
   }
 
   @override
   Future<bool> createBond() async {
     if (_activeDevice == null) return false;
+    // iOS CoreBluetooth automatically handles bonding/encryption at the GATT layer
+    // upon accessing protected characteristics; createBond is Android-only.
+    if (defaultTargetPlatform != TargetPlatform.android) {
+      return true;
+    }
     try {
       await _activeDevice!.createBond();
       return true;
@@ -120,6 +134,8 @@ class FlutterBluePlusTransport implements BleTransport {
 
   @override
   Future<void> removeBond(String deviceId) async {
+    // iOS does not allow programmatically removing bonds; users must 'Forget This Device' in iOS Settings.
+    if (defaultTargetPlatform != TargetPlatform.android) return;
     try {
       final device = BluetoothDevice.fromId(deviceId);
       await device.removeBond();

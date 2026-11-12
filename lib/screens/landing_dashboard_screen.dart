@@ -68,7 +68,7 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
       return;
     }
     final scanner = ref.read(bleScannerProvider);
-    scanner.startScan(timeout: const Duration(seconds: 60));
+    scanner.startScan();
   }
 
   Future<void> _checkAndAutoConnect(List<DiscoveredRobot> discoveredList) async {
@@ -277,22 +277,6 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
       } else if (!isScanning && _radarController.isAnimating) {
         _radarController.stop();
         _radarController.reset();
-      }
-
-      // Continuous auto-discovery loop: if scan times out while looking for robots,
-      // seamlessly restart the scan cycle after a brief radio rest (500ms).
-      if (!isScanning && mounted && (ModalRoute.of(context)?.isCurrent ?? false)) {
-        final connState = ref.read(bleConnectionManagerProvider).currentState;
-        final isConnected = connState == BleConnectionState.ready ||
-            connState == BleConnectionState.connected ||
-            connState == BleConnectionState.connecting ||
-            connState == BleConnectionState.discovering;
-        if (!isConnected) {
-          Future.delayed(const Duration(milliseconds: 500), () {
-            if (!mounted) return;
-            _startContinuousAutoScan();
-          });
-        }
       }
     });
 
