@@ -94,6 +94,12 @@ void main() {
       expect(cmd[0], equals(0x0A));
       expect(cmd[1], equals(2)); // preset_id = 2
       expect(cmd[2], equals(1)); // step_count = 1
+
+      final compactCmd = CommandBuilder.buildSetButtonSequence(2, routine, compact: true);
+      expect(compactCmd[0], equals(0x0A));
+
+      expect(() => CommandBuilder.buildSetButtonSequence(0, routine), throwsRangeError);
+      expect(() => CommandBuilder.buildSetButtonSequence(5, routine), throwsRangeError);
     });
   });
 }

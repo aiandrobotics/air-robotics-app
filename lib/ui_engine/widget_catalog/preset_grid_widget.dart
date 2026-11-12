@@ -164,6 +164,7 @@ class PresetGridWidget extends ConsumerWidget {
       try {
         await ref.read(commandPipelineProvider).restoreFactoryPresets();
         if (context.mounted) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('All presets successfully erased and restored to factory defaults.'),
@@ -173,6 +174,7 @@ class PresetGridWidget extends ConsumerWidget {
         }
       } catch (e) {
         if (context.mounted) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Failed to erase presets in firmware: $e'),

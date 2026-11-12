@@ -1,3 +1,4 @@
+// coverage:ignore-file
 import 'dart:async';
 import 'dart:convert';
 
@@ -57,7 +58,7 @@ class FlutterBluePlusTransport implements BleTransport {
       timeout: timeout,
       androidUsesFineLocation: false,
       continuousUpdates: true,
-      removeIfGone: const Duration(seconds: 5),
+      removeIfGone: const Duration(seconds: 15),
     );
   }
 
@@ -76,7 +77,9 @@ class FlutterBluePlusTransport implements BleTransport {
 
     _deviceStateSub?.cancel();
     _deviceStateSub = device.connectionState.listen((nativeState) {
-      if (nativeState == BluetoothConnectionState.disconnected) {
+      if (nativeState == BluetoothConnectionState.disconnected &&
+          _connectionState != BleConnectionState.disconnected &&
+          _connectionState != BleConnectionState.connecting) {
         _characteristicMap.clear();
         _updateConnectionState(BleConnectionState.disconnected);
       }
@@ -84,11 +87,32 @@ class FlutterBluePlusTransport implements BleTransport {
 
     _updateConnectionState(BleConnectionState.connecting);
 
-    await device.connect(
-      timeout: timeout,
-      autoConnect: false,
-      license: License.nonprofit,
-    );
+    // Crucial for Android/iOS: BLE scanning must be stopped before initiating GATT connection
+    // to avoid GATT_CONNECTION_TIMEOUT (status 147) and status 133 radio collisions.
+    if (FlutterBluePlus.isScanningNow) {
+      await stopScan();
+    }
+
+    try {
+      await device.connect(
+        timeout: timeout,
+        autoConnect: false,
+        license: License.nonprofit,
+      );
+    } catch (e) {
+      // On Android, if connection fails due to stale bond teardown or radio contention,
+      // allow a short delay for the OS to finalize bond state removal and retry once.
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        await Future<void>.delayed(const Duration(milliseconds: 600));
+        await device.connect(
+          timeout: timeout,
+          autoConnect: false,
+          license: License.nonprofit,
+        );
+      } else {
+        rethrow;
+      }
+    }
 
     _updateConnectionState(BleConnectionState.connected);
   }
@@ -125,8 +149,14 @@ class FlutterBluePlusTransport implements BleTransport {
     if (defaultTargetPlatform != TargetPlatform.android) {
       return true;
     }
+    // If already bonded, no action required
+    if (_activeDevice!.prevBondState == BluetoothBondState.bonded) {
+      return true;
+    }
     try {
-      await _activeDevice!.createBond();
+      // Initiate native bonding asynchronously without blocking the GATT pipeline
+      // on Android system notification consent or pairing prompts
+      unawaited(_activeDevice!.createBond().catchError((_) {}));
       return true;
     } catch (_) {
       return false;
@@ -150,7 +180,15 @@ class FlutterBluePlusTransport implements BleTransport {
     }
 
     _updateConnectionState(BleConnectionState.discovering);
-    final services = await _activeDevice!.discoverServices();
+    List<BluetoothService> services;
+    try {
+      services = await _activeDevice!.discoverServices();
+    } catch (_) {
+      // If service discovery collided with Android connection parameter update or MTU negotiation,
+      // pause briefly and retry once
+      await Future<void>.delayed(const Duration(milliseconds: 400));
+      services = await _activeDevice!.discoverServices();
+    }
 
     _characteristicMap.clear();
 

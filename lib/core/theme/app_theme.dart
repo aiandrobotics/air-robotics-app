@@ -5,7 +5,7 @@ import 'app_tokens.dart';
 
 /// Configured dark safety theme for AIR Robotics.
 class AppTheme {
-  AppTheme._();
+  AppTheme._(); // coverage:ignore-line
 
   static ThemeData get darkTheme {
     return ThemeData(

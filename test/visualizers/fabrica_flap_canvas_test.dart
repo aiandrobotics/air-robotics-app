@@ -178,9 +178,9 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('0°'), findsNWidgets(4));
 
-      // Emit new packet with Ch 0 at 90° and Ch 1 at 45°
+      // Emit new packet with Ch 0 at 175° and Ch 1 at 45°
       final angles = List<int>.filled(16, 0);
-      angles[0] = 90;
+      angles[0] = 175;
       angles[1] = 45;
       streamController.add(makeTestPacket(sequence: 2, channelAngles: angles));
 
@@ -188,7 +188,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 120));
       await tester.pumpAndSettle();
 
-      expect(find.text('90°'), findsOneWidget);
+      expect(find.text('175°'), findsOneWidget);
       expect(find.text('45°'), findsOneWidget);
     });
 

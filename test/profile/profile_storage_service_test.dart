@@ -17,6 +17,7 @@ void main() {
     });
 
     test('stores, retrieves, and deletes device profiles', () async {
+      await storage.init();
       final profile = DiagnosticProfileBuilder.build('Test-Bot-9000');
 
       expect(await storage.getProfile('Test-Bot-9000'), isNull);

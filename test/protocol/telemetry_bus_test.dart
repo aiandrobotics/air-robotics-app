@@ -136,5 +136,23 @@ void main() {
       expect(bus.currentMetrics.dropRatePercent, equals(0.0));
       expect(bus.currentMetrics.frequencyHz, equals(0.0));
     });
+
+    test('TelemetryMetrics copyWith and toString', () {
+      const metrics = TelemetryMetrics(totalPackets: 10, droppedPackets: 1, dropRatePercent: 10.0, frequencyHz: 20.0);
+      expect(metrics.toString(), contains('total: 10'));
+
+      final copy = metrics.copyWith(totalPackets: 15);
+      expect(copy.totalPackets, equals(15));
+      expect(copy.droppedPackets, equals(1));
+    });
+
+    test('TelemetryBus handles error on transport subscription gracefully', () {
+      final errorTransport = MockBleTransport();
+      final errorBus = TelemetryBus(transport: errorTransport);
+      errorBus.start();
+      errorTransport.emitTelemetryError(Exception('BLE radio error'));
+      errorBus.dispose();
+      errorTransport.dispose();
+    });
   });
 }

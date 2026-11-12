@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -6,6 +7,7 @@ import '../core/ble/ble_providers.dart';
 import '../core/ble/ble_transport_interface.dart';
 import '../core/fleet/fleet_providers.dart';
 import '../core/fleet/registered_robot.dart';
+import '../core/protocol/protocol_providers.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_tokens.dart';
 import 'add_device_catalog_screen.dart';
@@ -109,6 +111,12 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
     setState(() => _connectingDeviceId = robot.id);
     ref.read(bleConnectionManagerProvider).resetManualDisconnect();
     try {
+      await ref.read(bleScannerProvider).stopScan();
+      if (defaultTargetPlatform == TargetPlatform.android && robot.isPairingMode) {
+        try {
+          await ref.read(bleTransportProvider).removeBond(robot.id);
+        } catch (_) {}
+      }
       final manager = ref.read(bleConnectionManagerProvider);
       await manager.connect(robot);
       await ref.read(fleetStorageProvider).setLastConnectedRobotId(robot.id);
@@ -216,6 +224,105 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
     );
   }
 
+  void _showFactoryResetConfirmation(BuildContext context, RegisteredRobot robot) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTokens.radiusLg),
+          side: const BorderSide(color: AppColors.crimson),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: AppColors.crimson, size: 26),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Full Hardware Factory Reset?',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.crimson,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'This will send opcode 0x1F to ${robot.displayName}:\n\n'
+          '• Wipes all custom routines in flash & restores factory defaults.\n'
+          '• Homes all 16 flap servos to 0°.\n'
+          '• Erases all bonded phone encryption keys from flash.\n'
+          '• Terminates Bluetooth link and restarts indefinite pairing mode.\n\n'
+          'The robot will be removed from Your Devices on this phone.',
+          style: const TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 13,
+            height: 1.4,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('CANCEL', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.crimson,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              Navigator.of(dialogContext).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Executing Full Factory Reset (0x1F) on ${robot.displayName}...'),
+                  backgroundColor: AppColors.crimson,
+                ),
+              );
+
+              final commandPipeline = ref.read(commandPipelineProvider);
+              final bleTransport = ref.read(bleTransportProvider);
+              final fleetStorage = ref.read(fleetStorageProvider);
+              final robotsNotifier = ref.read(registeredRobotsProvider.notifier);
+              final bleManager = ref.read(bleConnectionManagerProvider);
+
+              // 1. Dispatch opcode 0x1F to firmware FIRST while link and security bond are alive
+              try {
+                await commandPipeline.factoryResetAll();
+              } catch (_) {
+                try {
+                  await commandPipeline.sendRawControlPoint(
+                    Uint8List.fromList([0x1F]),
+                    withoutResponse: true,
+                  );
+                } catch (_) {}
+              }
+
+              await Future<void>.delayed(const Duration(milliseconds: 350));
+
+              // 2. Remove robot from mobile fleet storage and clear OS bond
+              try {
+                await bleTransport.removeBond(robot.id);
+              } catch (_) {}
+              final lastId = await fleetStorage.getLastConnectedRobotId();
+              if (lastId == robot.id) {
+                await fleetStorage.setLastConnectedRobotId(null);
+              }
+              await robotsNotifier.removeRobot(robot.id);
+
+              // 3. Disconnect BLE manager
+              try {
+                await bleManager.disconnect();
+              } catch (_) {}
+            },
+            child: const Text('RESET EVERYTHING (0x1F)'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showUnpairConfirmation(BuildContext context, RegisteredRobot robot) {
     showDialog<void>(
       context: context,
@@ -226,7 +333,7 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         content: Text(
-          'This will remove ${robot.displayName} (${robot.id}) from Your Devices. You can re-add it at any time.',
+          'This will remove ${robot.displayName} (${robot.id}) from Your Devices. You can re-add it at any time.\n\nNote: To completely wipe robot flash and restore factory defaults, use "Factory Reset (0x1F)".',
           style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
         ),
         actions: [
@@ -616,8 +723,11 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
     final manager = ref.read(bleConnectionManagerProvider);
     final connStateAsync = ref.watch(bleConnectionStateProvider);
     final connState = connStateAsync.value ?? manager.currentState;
-    final isConnected = connState == BleConnectionState.ready &&
-        manager.connectedRobot?.id == robot.id;
+    final isConnected = (connState == BleConnectionState.ready ||
+            connState == BleConnectionState.connected) &&
+        (manager.connectedRobot?.id == robot.id ||
+            (manager.connectedRobot == null &&
+                (ref.read(registeredRobotsProvider).value?.length ?? 0) == 1));
     final isInRange = liveMatch != null || isConnected;
     final rssi = liveMatch?.smoothedRssi;
 
@@ -790,39 +900,64 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
                   await ref.read(bleConnectionManagerProvider).disconnect();
                 } else if (action == 'rename') {
                   _showRenameDialog(context, robot);
+                } else if (action == 'factory_reset') {
+                  _showFactoryResetConfirmation(context, robot);
                 } else if (action == 'unpair') {
                   _showUnpairConfirmation(context, robot);
                 }
               },
               itemBuilder: (context) => [
-                if (isConnected)
+                if (isConnected) ...[
                   const PopupMenuItem(
                     value: 'disconnect',
                     child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.link_off, size: 16, color: AppColors.amber),
                         SizedBox(width: 8),
-                        Text('Disconnect', style: TextStyle(fontSize: 13, color: AppColors.amber)),
+                        Flexible(
+                          child: Text('Disconnect', style: TextStyle(fontSize: 13, color: AppColors.amber)),
+                        ),
                       ],
                     ),
                   ),
+                  const PopupMenuItem(
+                    value: 'factory_reset',
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.warning_amber_rounded, size: 16, color: AppColors.crimson),
+                        SizedBox(width: 8),
+                        Flexible(
+                          child: Text('Factory Reset (0x1F)', style: TextStyle(fontSize: 13, color: AppColors.crimson)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const PopupMenuItem(
                   value: 'rename',
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.edit, size: 16, color: AppColors.cyan),
                       SizedBox(width: 8),
-                      Text('Rename', style: TextStyle(fontSize: 13)),
+                      Flexible(
+                        child: Text('Rename', style: TextStyle(fontSize: 13)),
+                      ),
                     ],
                   ),
                 ),
                 const PopupMenuItem(
                   value: 'unpair',
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.link_off, size: 16, color: AppColors.crimson),
                       SizedBox(width: 8),
-                      Text('Unpair', style: TextStyle(fontSize: 13, color: AppColors.crimson)),
+                      Flexible(
+                        child: Text('Unpair', style: TextStyle(fontSize: 13, color: AppColors.crimson)),
+                      ),
                     ],
                   ),
                 ),

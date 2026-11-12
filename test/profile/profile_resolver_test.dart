@@ -83,6 +83,9 @@ void main() {
       final customFabrica = DiagnosticProfileBuilder.build('Fabrica-DevKit-v1');
       await resolver.saveUserOverride(customFabrica);
 
+      // Clear memory cache to ensure Tier 2 offline storage loads and re-caches it
+      resolver.clearCache();
+
       final resolved = await resolver.resolveProfile('Fabrica-DevKit-v1');
       expect(resolved.modelNumber, equals('Fabrica-DevKit-v1'));
       expect(resolved.actuators.length, equals(16)); // Overridden

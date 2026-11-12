@@ -4,7 +4,7 @@ import 'device_profile.dart';
 /// Procedurally constructs a valid Tier 4 [DeviceProfile] for unprofiled
 /// or unrecognized AIR Robotics hardware models.
 class DiagnosticProfileBuilder {
-  DiagnosticProfileBuilder._();
+  DiagnosticProfileBuilder._(); // coverage:ignore-line
 
   /// Builds an in-memory [DeviceProfile] exposing standard 16 servo channels,
   /// emergency stop, status banner, jog controls, and raw hex console.

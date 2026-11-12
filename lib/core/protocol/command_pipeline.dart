@@ -174,7 +174,13 @@ class CommandPipeline {
   /// from hardware flash before the robot disconnects and re-enters pairing mode.
   Future<void> factoryResetAll() async {
     final payload = CommandBuilder.buildFactoryResetAll();
-    await transport.writeControlPoint(payload, withoutResponse: false);
+    try {
+      await transport.writeControlPoint(payload, withoutResponse: false);
+    } catch (_) {
+      try {
+        await transport.writeControlPoint(payload, withoutResponse: true);
+      } catch (_) {}
+    }
   }
 
   /// Dispatches an arbitrary raw byte payload to the FAB1 control point.

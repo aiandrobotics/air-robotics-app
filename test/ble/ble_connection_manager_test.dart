@@ -1,5 +1,7 @@
 import 'package:air_robotics_app/core/ble/ble_connection_manager.dart';
+import 'package:air_robotics_app/core/ble/ble_providers.dart';
 import 'package:air_robotics_app/core/ble/ble_transport_interface.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../mocks/mock_ble_transport.dart';
@@ -48,7 +50,6 @@ void main() {
         states,
         containsAllInOrder([
           BleConnectionState.connecting,
-          BleConnectionState.connected,
           BleConnectionState.bonding,
           BleConnectionState.discovering,
           BleConnectionState.ready,
@@ -103,6 +104,77 @@ void main() {
 
       expect(manager.currentState, equals(BleConnectionState.disconnected));
       expect(manager.connectedRobot, isNull);
+    });
+
+    test('reconnect attempts exceeding maxReconnectAttempts sets disconnected', () async {
+      final zeroRetryManager = BleConnectionManager(
+        transport: transport,
+        maxReconnectAttempts: 0,
+      );
+      addTearDown(zeroRetryManager.dispose);
+
+      final robot = DiscoveredRobot(
+        id: 'dev_test_limit',
+        name: 'Fabrica-Test',
+        rawRssi: -50,
+        smoothedRssi: -50.0,
+        isPairingMode: false,
+        lastSeen: DateTime.now(),
+      );
+
+      await zeroRetryManager.connect(robot);
+      transport.simulateUnexpectedDisconnection();
+      await pumpEventQueue();
+
+      expect(zeroRetryManager.currentState, equals(BleConnectionState.disconnected));
+    });
+
+    test('connect error schedules auto-reconnect', () async {
+      transport.failNextConnect = true;
+      final robot = DiscoveredRobot(
+        id: 'dev_fail',
+        name: 'Fabrica-Fail',
+        rawRssi: -50,
+        smoothedRssi: -50.0,
+        isPairingMode: false,
+        lastSeen: DateTime.now(),
+      );
+
+      await expectLater(manager.connect(robot), throwsA(isA<StateError>()));
+      await pumpEventQueue();
+      expect(manager.currentState, equals(BleConnectionState.reconnecting));
+    });
+
+    test('SelectedRobotNotifier and ViewingDeviceNotifier state transitions', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final selectedNotifier = container.read(selectedRobotProvider.notifier);
+      expect(container.read(selectedRobotProvider), isNull);
+
+      final robot = DiscoveredRobot(
+        id: 'sel_1',
+        name: 'Fabrica-Sel',
+        rawRssi: -60,
+        smoothedRssi: -60.0,
+        isPairingMode: true,
+        lastSeen: DateTime.now(),
+      );
+
+      selectedNotifier.select(robot);
+      expect(container.read(selectedRobotProvider)?.id, equals('sel_1'));
+
+      selectedNotifier.select(null);
+      expect(container.read(selectedRobotProvider), isNull);
+
+      final viewingNotifier = container.read(isViewingDeviceProvider.notifier);
+      expect(container.read(isViewingDeviceProvider), isFalse);
+
+      viewingNotifier.openDevice();
+      expect(container.read(isViewingDeviceProvider), isTrue);
+
+      viewingNotifier.closeDevice();
+      expect(container.read(isViewingDeviceProvider), isFalse);
     });
   });
 }

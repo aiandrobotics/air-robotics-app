@@ -49,7 +49,7 @@ class BleScanner {
     required this.transport,
     this.allowedPrefixes = const ['Fabrica-', 'AIR-'],
     this.smoothingAlpha = 0.25,
-    this.staleThreshold = const Duration(seconds: 5),
+    this.staleThreshold = const Duration(seconds: 15),
   }) {
     _scanSub = transport.scanResultsStream.listen(_onRawScanResults);
   }

@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:air_robotics_app/core/ble/ble_transport_interface.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../mocks/mock_ble_transport.dart';
@@ -42,6 +43,56 @@ void main() {
       await transport.writeControlPoint(estopCmd, withoutResponse: true);
       expect(transport.writtenControlPointPayloads.last, equals(estopCmd));
       expect(transport.writtenControlPointNoResponse.last, isTrue);
+    });
+
+    test('DiscoveredRobot copyWith, equality, hashCode and toString', () {
+      final now = DateTime.now();
+      final robot1 = DiscoveredRobot(
+        id: 'r1',
+        name: 'Fabrica-1',
+        rawRssi: -70,
+        smoothedRssi: -70.0,
+        isPairingMode: true,
+        lastSeen: now,
+      );
+      final robot2 = robot1.copyWith(name: 'Fabrica-2', isPairingMode: false);
+      expect(robot2.name, equals('Fabrica-2'));
+      expect(robot2.id, equals('r1'));
+      expect(robot2.isPairingMode, isFalse);
+
+      final robotIdentical = robot1.copyWith();
+      expect(robot1, equals(robotIdentical));
+      expect(robot1.hashCode, equals(robotIdentical.hashCode));
+      expect(robot1.toString(), contains('Fabrica-1'));
+
+      final robotDifferent = DiscoveredRobot(
+        id: 'r2',
+        name: 'Fabrica-1',
+        rawRssi: -70,
+        smoothedRssi: -70.0,
+        isPairingMode: true,
+        lastSeen: now,
+      );
+      expect(robot1 == robotDifferent, isFalse);
+    });
+
+    test('BleGattInfo toString and compatibility', () {
+      const gatt = BleGattInfo(
+        modelNumber: 'TestModel',
+        firmwareRevision: '1.0',
+        manufacturer: 'AIR',
+        hasControlPoint: true,
+        hasTelemetryStream: true,
+        hasConfiguration: true,
+        negotiatedMtu: 512,
+      );
+      expect(gatt.toString(), contains('TestModel'));
+      expect(gatt.isAirRoboticsCompatible, isTrue);
+    });
+
+    test('BleTransport subscribeTelemetry subscribes to telemetry characteristic', () {
+      final stream = transport.subscribeTelemetry();
+      expect(stream, isNotNull);
     });
   });
 }

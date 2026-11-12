@@ -167,5 +167,31 @@ void main() {
           equals('Fabrica-DevKit-v1'));
       expect(container.read(activeProfileProvider).actuators.length, equals(4));
     });
+
+    test('falls back to robot name when DIS model is empty string', () async {
+      container.listen<DeviceProfile>(
+        activeProfileProvider,
+        (previous, next) {},
+        fireImmediately: true,
+      );
+
+      final manager = container.read(bleConnectionManagerProvider);
+      mockTransport.mockModelNumber = '';
+
+      final robot = DiscoveredRobot(
+        id: '22:33:44:55:66:77',
+        name: 'Fabrica-Cloth-Folder',
+        rawRssi: -50,
+        smoothedRssi: -50.0,
+        isPairingMode: false,
+        lastSeen: DateTime.now(),
+      );
+
+      await manager.connect(robot);
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      final activeProfile = container.read(activeProfileProvider);
+      expect(activeProfile.modelNumber, equals('Fabrica-DevKit-v1'));
+    });
   });
 }

@@ -249,5 +249,36 @@ void main() {
       expect(payloads.first, equals([0x0B]));
       expect(find.textContaining('Sync requested'), findsOneWidget);
     });
+
+    testWidgets('cancels restore and flash dialogs and adds dual step', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(600, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(createTestWidget());
+      await tester.pumpAndSettle();
+
+      // 1. Cancel restore dialog
+      await tester.tap(find.text('RESTORE FACTORY PRESETS'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CANCEL'));
+      await tester.pumpAndSettle();
+
+      // 2. Cancel flash dialog
+      await tester.tap(find.text('SAVE TO BUTTON'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CANCEL'));
+      await tester.pumpAndSettle();
+
+      // 3. Add dual flap step via dialog
+      await tester.tap(find.textContaining('ADD MOTION STEP'));
+      await tester.pumpAndSettle();
+
+      final dualCheckbox = find.byType(CheckboxListTile);
+      await tester.tap(dualCheckbox);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('ADD'));
+      await tester.pumpAndSettle();
+    });
   });
 }

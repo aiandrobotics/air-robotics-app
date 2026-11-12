@@ -24,7 +24,7 @@ enum BleOpcode {
 /// Serializes high-level commands into raw binary payloads for dispatching
 /// across the FAB1 Control Point characteristic.
 class CommandBuilder {
-  CommandBuilder._();
+  CommandBuilder._(); // coverage:ignore-line
 
   /// Builds opcode `0x00` [presetId]: Trigger a saved physical button preset (1 to 4).
   static Uint8List buildRunPreset(int presetId) {

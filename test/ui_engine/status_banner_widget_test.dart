@@ -139,5 +139,87 @@ void main() {
       expect(find.text('E-STOP LATCHED'), findsOneWidget);
       expect(find.text('NVS STORAGE FAULT'), findsNothing);
     });
+
+    testWidgets('renders NVS storage fault, calibrating state, and various LED/RSSI ranges', (tester) async {
+      final container = ProviderContainer(
+        overrides: [
+          bleTransportProvider.overrideWithValue(mockTransport),
+          bleConnectionStateProvider.overrideWith((ref) => Stream.value(BleConnectionState.ready)),
+          latestTelemetryProvider.overrideWith(
+            (ref) => Stream.value(
+              makeTestPacket(
+                systemState: SystemState.calibrating,
+                ledState: LedState.pairing,
+                rssi: -72,
+                errorCode: TelemetryPacket.faultBitNvs,
+              ),
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: Scaffold(
+              body: StatusBannerWidget(
+                config: AirWidgetConfig(
+                  type: 'status-banner',
+                  props: {'show_led_mirror': true, 'show_rssi': true},
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('CALIBRATING'), findsOneWidget);
+      expect(find.text('LED: PAIRING'), findsOneWidget);
+      expect(find.text('NVS STORAGE FAULT'), findsOneWidget);
+      expect(find.text('-72 dBm'), findsOneWidget);
+    });
+
+    testWidgets('renders identify LED, error machine state, and -82 dBm RSSI', (tester) async {
+      final container = ProviderContainer(
+        overrides: [
+          bleTransportProvider.overrideWithValue(mockTransport),
+          bleConnectionStateProvider.overrideWith((ref) => Stream.value(BleConnectionState.ready)),
+          latestTelemetryProvider.overrideWith(
+            (ref) => Stream.value(
+              makeTestPacket(
+                systemState: SystemState.error,
+                ledState: LedState.identify,
+                rssi: -82,
+              ),
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: Scaffold(
+              body: StatusBannerWidget(
+                config: AirWidgetConfig(
+                  type: 'status-banner',
+                  props: {'show_led_mirror': true, 'show_rssi': true},
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('ERROR'), findsOneWidget);
+      expect(find.text('LED: IDENTIFY'), findsOneWidget);
+      expect(find.text('-82 dBm'), findsOneWidget);
+    });
   });
 }

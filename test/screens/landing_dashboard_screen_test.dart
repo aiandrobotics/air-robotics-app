@@ -33,6 +33,7 @@ void main() {
       }
 
       return ProviderScope(
+        key: UniqueKey(),
         overrides: [
           bleTransportProvider.overrideWithValue(mockTransport),
           fleetStorageProvider.overrideWithValue(mockFleetStorage),
@@ -162,6 +163,111 @@ void main() {
       expect(find.widgetWithText(AppBar, 'ADD NEW ROBOT'), findsOneWidget);
       expect(find.text('FABRICA'), findsOneWidget);
       expect(find.text('SUPPORTED ROBOTS'), findsOneWidget);
+    });
+
+    testWidgets('Registered robot menu: disconnect, rename, factory reset, unpair, and OPEN', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(600, 1000));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final robot = RegisteredRobot(
+        id: 'robot-reg-1',
+        name: 'Fabrica-LivingRoom',
+        modelNumber: 'Fabrica-DevKit-v1',
+        pairedAt: DateTime.now(),
+      );
+
+      // Connect transport to this robot
+      await mockTransport.connect('robot-reg-1');
+      await mockTransport.discoverServices();
+
+      await tester.pumpWidget(createTestApp(initialRobots: [robot]));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('Fabrica-LivingRoom'), findsOneWidget);
+      expect(find.text('CONNECTED'), findsOneWidget);
+
+      // 1. OPEN button opens device
+      final openButton = find.text('OPEN');
+      expect(openButton, findsOneWidget);
+      await tester.tap(openButton);
+      await tester.pump();
+
+      // 2. Open popup menu on registered robot
+      final moreButton = find.byIcon(Icons.more_vert);
+      expect(moreButton, findsOneWidget);
+      await tester.tap(moreButton);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Disconnect'), findsOneWidget);
+      expect(find.text('Rename'), findsOneWidget);
+      expect(find.text('Factory Reset (0x1F)'), findsOneWidget);
+      expect(find.text('Unpair'), findsOneWidget);
+
+      // Test Rename
+      await tester.tap(find.text('Rename'));
+      await tester.pumpAndSettle();
+      expect(find.text('Rename Robot'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField), 'Bedroom Folder');
+      await tester.tap(find.text('SAVE'));
+      await tester.pumpAndSettle();
+      expect(find.text('Bedroom Folder'), findsOneWidget);
+
+      // Test Factory Reset (0x1F)
+      await tester.tap(find.byIcon(Icons.more_vert));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Factory Reset (0x1F)'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Full Hardware Factory Reset?'), findsOneWidget);
+      await tester.tap(find.text('CANCEL'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.more_vert));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Factory Reset (0x1F)'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('RESET EVERYTHING (0x1F)'));
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+
+      // Verify opcode 0x1F was sent
+      expect(mockTransport.writtenControlPointPayloads.any((p) => p.isNotEmpty && p.first == 0x1F), isTrue);
+
+      // Test Unpair on newly added robot
+      final robot2 = RegisteredRobot(
+        id: 'robot-reg-2',
+        name: 'Fabrica-Kitchen',
+        modelNumber: 'Fabrica-DevKit-v1',
+        pairedAt: DateTime.now(),
+      );
+      await mockFleetStorage.saveRobot(robot2);
+      await tester.pumpWidget(createTestApp());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      final popupIcons = find.byIcon(Icons.more_vert);
+      await tester.tap(popupIcons.first);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.tap(find.text('Unpair'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(find.text('CANCEL'), findsOneWidget);
+      await tester.tap(find.text('CANCEL'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      await tester.tap(popupIcons.first);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.tap(find.text('Unpair'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.tap(find.text('UNPAIR'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
     });
   });
 }

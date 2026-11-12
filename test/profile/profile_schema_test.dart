@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:air_robotics_app/core/profile/device_profile.dart';
 import 'package:air_robotics_app/core/profile/profile_validator.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -67,6 +68,14 @@ void main() {
         ),
         throwsFormatException,
       );
+    });
+
+    test('AirVisualizerConfig toJson serialization', () {
+      final config = AirVisualizerConfig(id: 'vis_1', type: 'custom', options: {'speed': 100});
+      final json = config.toJson();
+      expect(json['id'], equals('vis_1'));
+      expect(json['type'], equals('custom'));
+      expect(json['options'], equals({'speed': 100}));
     });
   });
 }

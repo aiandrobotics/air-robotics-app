@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -57,6 +58,16 @@ class _PairRobotScreenState extends ConsumerState<PairRobotScreen>
   Future<void> _connectAndRegister(DiscoveredRobot robot) async {
     setState(() => _connectingDeviceId = robot.id);
     try {
+      // 1. Explicitly stop scanning so radio is completely dedicated to GATT link
+      await ref.read(bleScannerProvider).stopScan();
+
+      // 2. Clear any stale bond on Android for pairing-mode candidate
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        try {
+          await ref.read(bleTransportProvider).removeBond(robot.id);
+        } catch (_) {}
+      }
+
       final manager = ref.read(bleConnectionManagerProvider);
       manager.resetManualDisconnect();
       await manager.connect(robot);

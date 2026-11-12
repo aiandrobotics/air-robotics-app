@@ -242,5 +242,47 @@ void main() {
       expect(mockTransport.writtenControlPointPayloads.length, equals(1));
       expect(mockTransport.writtenControlPointPayloads.first, equals([0x0C]));
     });
+
+    testWidgets('PresetGridWidget displays error snackbar when restoreFactoryPresets throws', (tester) async {
+      final failingTransport = MockBleTransport();
+      final container = ProviderContainer(
+        overrides: [
+          bleTransportProvider.overrideWithValue(failingTransport),
+          commandPipelineProvider.overrideWithValue(CommandPipeline(transport: failingTransport)),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.read(activeProfileProvider.notifier).selectProfile(profile);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: PresetGridWidget(
+                  config: AirWidgetConfig(
+                    type: 'preset-grid',
+                    title: 'Folding Presets',
+                    props: {'columns': 2},
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      failingTransport.failNextWrite = true;
+      await tester.tap(find.text('ERASE PRESETS'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('ERASE IN FIRMWARE'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 1100));
+      await tester.pump(const Duration(milliseconds: 350));
+
+      expect(find.textContaining('Failed to erase presets in firmware'), findsOneWidget);
+    });
   });
 }

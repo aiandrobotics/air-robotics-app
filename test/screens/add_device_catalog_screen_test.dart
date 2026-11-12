@@ -143,5 +143,54 @@ void main() {
       expect(find.text('PAIR FABRICA-DEVKIT-V1'), findsOneWidget);
       expect(find.text('FABRICA PAIRING INSTRUCTIONS'), findsOneWidget);
     });
+
+    testWidgets('renders multiple discovered candidates with non-pairing mode and varying RSSI', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(600, 1000));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            bleTransportProvider.overrideWithValue(mockTransport),
+            fleetStorageProvider.overrideWithValue(mockFleetStorage),
+          ],
+          child: const MaterialApp(
+            home: AddDeviceCatalogScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      mockTransport.emitDiscoveredRobots([
+        DiscoveredRobot(
+          id: 'fab-1',
+          name: 'Fabrica-One',
+          rawRssi: -72,
+          smoothedRssi: -72.0,
+          isPairingMode: true,
+          lastSeen: DateTime.now(),
+        ),
+        DiscoveredRobot(
+          id: 'fab-2',
+          name: 'Fabrica-Two',
+          rawRssi: -88,
+          smoothedRssi: -88.0,
+          isPairingMode: false,
+          lastSeen: DateTime.now(),
+        ),
+      ]);
+      await tester.pumpAndSettle();
+
+      expect(find.text('AUTO DISCOVERED ROBOTS'), findsOneWidget);
+      expect(find.text('2 READY'), findsOneWidget);
+      expect(find.text('Fabrica-One'), findsOneWidget);
+      expect(find.text('Fabrica-Two'), findsOneWidget);
+
+      // Tap on card InkWell directly
+      await tester.tap(find.text('Fabrica-One'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('PAIR FABRICA-DEVKIT-V1'), findsOneWidget);
+    });
   });
 }

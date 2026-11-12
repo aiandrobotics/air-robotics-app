@@ -1,5 +1,8 @@
 import 'package:air_robotics_app/core/ble/ble_providers.dart';
+import 'package:air_robotics_app/core/ble/ble_transport_interface.dart';
 import 'package:air_robotics_app/core/ble/developer_debug_screen.dart';
+import 'package:air_robotics_app/core/profile/profile_providers.dart';
+import 'package:air_robotics_app/core/profile/profile_storage_service.dart';
 import 'package:air_robotics_app/core/protocol/protocol_providers.dart';
 import 'package:air_robotics_app/core/protocol/telemetry_packet.dart';
 import 'package:air_robotics_app/core/theme/app_theme.dart';
@@ -123,6 +126,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           bleTransportProvider.overrideWithValue(mockTransport),
+          profileStorageProvider.overrideWithValue(InMemoryProfileStorageService()),
         ],
       );
       addTearDown(container.dispose);
@@ -180,6 +184,100 @@ void main() {
       // Verify heap and RSSI
       expect(find.text('Heap: 195 KB'), findsOneWidget);
       expect(find.text('RSSI: -58 dBm'), findsOneWidget);
+    });
+
+    testWidgets('DeveloperDebugScreen quick actions, scan toggle, candidate connect, and hex validation', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final container = ProviderContainer(
+        overrides: [
+          bleTransportProvider.overrideWithValue(mockTransport),
+          profileStorageProvider.overrideWithValue(InMemoryProfileStorageService()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            theme: AppTheme.darkTheme,
+            home: const DeveloperDebugScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 1. Enter invalid hex
+      final textField = find.byType(TextField);
+      await tester.ensureVisible(textField);
+      await tester.enterText(textField, 'ZZ');
+      final sendButton = find.widgetWithText(ElevatedButton, 'SEND');
+      await tester.ensureVisible(sendButton);
+      await tester.tap(sendButton);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('ERR: Malformed hex string'), findsOneWidget);
+
+      // 2. Quick actions: Soft Stop (0x02)
+      final stopBtn = find.text('STOP');
+      await tester.ensureVisible(stopBtn);
+      await tester.tap(stopBtn);
+      await tester.pumpAndSettle();
+      expect(mockTransport.writtenControlPointPayloads.any((p) => p.isNotEmpty && p.first == 0x02), isTrue);
+
+      // 3. Preset 1
+      final p1Btn = find.text('RUN PRESET 1');
+      await tester.ensureVisible(p1Btn);
+      await tester.tap(p1Btn);
+      await tester.pumpAndSettle();
+      expect(mockTransport.writtenControlPointPayloads.any((p) => p.length >= 2 && p[0] == 0x00 && p[1] == 0x01), isTrue);
+
+      // 4. Identify
+      final idBtn = find.text('IDENTIFY');
+      await tester.ensureVisible(idBtn);
+      await tester.tap(idBtn);
+      await tester.pumpAndSettle();
+      expect(mockTransport.writtenControlPointPayloads.any((p) => p.isNotEmpty && p.first == 0x0E), isTrue);
+
+      // 5. Scan toggle button in card
+      final scanBtn = find.widgetWithText(ElevatedButton, 'START SCAN');
+      if (scanBtn.evaluate().isNotEmpty) {
+        await tester.ensureVisible(scanBtn);
+        await tester.tap(scanBtn);
+        await tester.pumpAndSettle();
+      }
+
+      // 6. Connect to candidate in debug screen
+      final candidate = DiscoveredRobot(
+        id: 'debug-r1',
+        name: 'Fabrica-Debug',
+        rawRssi: -55,
+        smoothedRssi: -55.0,
+        isPairingMode: true,
+        lastSeen: DateTime.now(),
+      );
+      mockTransport.emitDiscoveredRobots([candidate]);
+      await tester.pumpAndSettle();
+
+      final connectBtn = find.widgetWithText(ElevatedButton, 'CONNECT');
+      if (connectBtn.evaluate().isNotEmpty) {
+        await tester.ensureVisible(connectBtn.first);
+        await tester.tap(connectBtn.first);
+        await tester.pumpAndSettle();
+      }
+
+      // 7. Disconnect button when connected
+      final disconnectBtn = find.widgetWithText(TextButton, 'DISCONNECT');
+      if (disconnectBtn.evaluate().isNotEmpty) {
+        await tester.ensureVisible(disconnectBtn);
+        await tester.tap(disconnectBtn);
+        await tester.pumpAndSettle();
+      }
     });
   });
 }

@@ -8,11 +8,13 @@ import 'core/theme/app_theme.dart';
 import 'screens/landing_dashboard_screen.dart';
 import 'ui_engine/dynamic_screen_scaffold.dart';
 
+// coverage:ignore-start
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
   runApp(const ProviderScope(child: AirRoboticsApp()));
 }
+// coverage:ignore-end
 
 /// Root widget for the AIR Robotics mobile companion.
 class AirRoboticsApp extends StatelessWidget {

@@ -85,5 +85,65 @@ void main() {
       expect(fleet.first.name, 'Fabrica-1234');
       expect(fleet.first.modelNumber, 'Fabrica-DevKit-v1');
     });
+
+    testWidgets('renders generic instructions and handles scan toggle and connection failure', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(600, 1000));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            bleTransportProvider.overrideWithValue(mockTransport),
+            fleetStorageProvider.overrideWithValue(mockFleetStorage),
+          ],
+          child: const MaterialApp(
+            home: PairRobotScreen(
+              targetModel: 'AIR-Generic-v1',
+              namePrefix: 'AIR-',
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('PAIRING PROCEDURE'), findsOneWidget);
+      expect(find.textContaining('Ensure Bluetooth pairing mode is active'), findsOneWidget);
+
+      // Tap scan action icon
+      final scanAction = find.byTooltip('Stop Scan');
+      if (scanAction.evaluate().isNotEmpty) {
+        await tester.tap(scanAction);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
+      }
+      final rescanAction = find.byTooltip('Rescan');
+      if (rescanAction.evaluate().isNotEmpty) {
+        await tester.tap(rescanAction);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
+      }
+
+      // Test connection failure
+      mockTransport.failNextConnect = true;
+      mockTransport.emitDiscoveredRobots([
+        DiscoveredRobot(
+          id: 'air-fail-1',
+          name: 'AIR-FailBot',
+          rawRssi: -50,
+          smoothedRssi: -50.0,
+          isPairingMode: true,
+          lastSeen: DateTime.now(),
+        ),
+      ]);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      await tester.tap(find.text('PAIR & CONNECT'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.textContaining('Failed to connect to AIR-FailBot'), findsOneWidget);
+    });
   });
 }

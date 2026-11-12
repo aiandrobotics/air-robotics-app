@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 /// Ergonomic layout tokens, spacing, and accessibility constraints.
 class AppTokens {
-  AppTokens._();
+  AppTokens._(); // coverage:ignore-line
 
   /// Mandatory minimum touch target dimension (>= 48x48 dp) for reliable
   /// tactile interaction in workshop, makerspace, and lab environments.

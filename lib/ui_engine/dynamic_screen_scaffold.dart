@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -168,7 +169,22 @@ class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
               String? robotId = bleManager.connectedRobot?.id;
               robotId ??= await fleetStorage.getLastConnectedRobotId();
 
-              // 2. Remove robot from mobile fleet storage immediately
+              // 2. Dispatch opcode 0x1F to firmware FIRST while link and security bond are alive!
+              try {
+                await commandPipeline.factoryResetAll();
+              } catch (_) {
+                try {
+                  await commandPipeline.sendRawControlPoint(
+                    Uint8List.fromList([0x1F]),
+                    withoutResponse: true,
+                  );
+                } catch (_) {}
+              }
+
+              // Give radio packet time to clear RF buffer before tearing down OS bond
+              await Future<void>.delayed(const Duration(milliseconds: 350));
+
+              // 3. Remove robot from mobile fleet storage and purge OS bond
               if (robotId != null) {
                 try {
                   await bleTransport.removeBond(robotId);
@@ -186,11 +202,6 @@ class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
                 }
               }
               await fleetStorage.setLastConnectedRobotId(null);
-
-              // 3. Dispatch opcode 0x1F to firmware
-              try {
-                await commandPipeline.factoryResetAll();
-              } catch (_) {}
 
               // 4. Disconnect BLE manager and return to home screen
               try {
@@ -278,6 +289,7 @@ class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
       },
       child: Scaffold(
         appBar: AppBar(
+          titleSpacing: 0,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
             tooltip: 'Back to Home',
@@ -290,30 +302,38 @@ class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
           ),
           title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 headerTitle,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
               ),
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    width: 8,
-                    height: 8,
+                    width: 7,
+                    height: 7,
                     decoration: BoxDecoration(
                       color: _connStateColor(connState),
                       shape: BoxShape.circle,
                     ),
                   ),
                   const SizedBox(width: 4),
-                  Text(
-                    connState == BleConnectionState.ready
-                        ? '${connState.name.toUpperCase()} • ${packet?.bleRssiDbm ?? 0} dBm'
-                        : connState.name.toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: _connStateColor(connState),
-                      fontWeight: FontWeight.bold,
+                  Flexible(
+                    child: Text(
+                      connState == BleConnectionState.ready
+                          ? '${connState.name.toUpperCase()} • ${packet?.bleRssiDbm ?? 0} dBm'
+                          : connState.name.toUpperCase(),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: _connStateColor(connState),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],
@@ -322,6 +342,8 @@ class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
           ),
           actions: [
             IconButton(
+              visualDensity: VisualDensity.compact,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
               icon: const Icon(Icons.flare, size: 20, color: AppColors.purple),
               tooltip: 'Identify Robot (Pulse LED 3s)',
               onPressed: () async {
@@ -340,17 +362,23 @@ class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
               },
             ),
             IconButton(
-              icon: const Icon(Icons.delete_sweep, size: 22, color: AppColors.crimson),
+              visualDensity: VisualDensity.compact,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              icon: const Icon(Icons.delete_sweep, size: 20, color: AppColors.crimson),
               tooltip: 'Erase Presets in Firmware',
               onPressed: () => _confirmErasePresets(context),
             ),
             IconButton(
+              visualDensity: VisualDensity.compact,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
               icon: const Icon(Icons.link_off, size: 20, color: AppColors.textSecondary),
               tooltip: 'Disconnect Robot',
               onPressed: () => _confirmDisconnect(context),
             ),
             IconButton(
-              icon: const Icon(Icons.bug_report),
+              visualDensity: VisualDensity.compact,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              icon: const Icon(Icons.bug_report, size: 20),
               tooltip: 'BLE Hardware Debugger',
               onPressed: () {
                 Navigator.of(context).push(
@@ -361,7 +389,6 @@ class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
               },
             ),
             PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert, size: 20),
               tooltip: 'More Hardware Options',
               color: AppColors.surface,
               onSelected: (value) {
@@ -375,12 +402,15 @@ class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
                 const PopupMenuItem(
                   value: 'factory_reset',
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.warning_amber_rounded, size: 18, color: AppColors.crimson),
                       SizedBox(width: 8),
-                      Text(
-                        'Full Factory Reset (0x1F)',
-                        style: TextStyle(color: AppColors.crimson),
+                      Flexible(
+                        child: Text(
+                          'Full Factory Reset (0x1F)',
+                          style: TextStyle(color: AppColors.crimson),
+                        ),
                       ),
                     ],
                   ),

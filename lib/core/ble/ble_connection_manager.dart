@@ -26,7 +26,7 @@ class BleConnectionManager {
     required this.transport,
     this.maxReconnectAttempts = 5,
     this.maxBackoffInterval = const Duration(seconds: 30),
-  }) {
+  }) : _state = transport.currentConnectionState {
     _transportStateSub =
         transport.connectionStateStream.listen(_onTransportStateChanged);
   }
@@ -34,7 +34,7 @@ class BleConnectionManager {
   Stream<BleConnectionState> get stateStream => _stateController.stream;
   BleConnectionState get currentState => _state;
   BleGattInfo? get gattInfo => _gattInfo;
-  DiscoveredRobot? get connectedRobot => _targetRobot;
+  DiscoveredRobot? get connectedRobot => _targetRobot ?? transport.connectedRobot;
   bool get isManualDisconnect => _manualDisconnect;
 
   /// Resets the manual disconnect flag (e.g. on app resume or user reconnect).
@@ -117,9 +117,11 @@ class BleConnectionManager {
   }
 
   void _onTransportStateChanged(BleConnectionState transportState) {
+    // Only schedule auto-reconnect if the connection was fully established (ready)
+    // and dropped unexpectedly. Do not disrupt in-flight connecting/bonding/discovering cycles.
     if (transportState == BleConnectionState.disconnected &&
         !_manualDisconnect &&
-        _state != BleConnectionState.disconnected &&
+        _state == BleConnectionState.ready &&
         _targetRobot != null) {
       _scheduleAutoReconnect();
     }

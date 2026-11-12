@@ -29,6 +29,14 @@ void main() {
       expect(() => RssiSmoother(alpha: 0.0), throwsArgumentError);
       expect(() => RssiSmoother(alpha: 1.1), throwsArgumentError);
     });
+
+    test('reset clears smoothed state', () {
+      final smoother = RssiSmoother(alpha: 0.25);
+      smoother.update(-70);
+      expect(smoother.current, equals(-70.0));
+      smoother.reset();
+      expect(smoother.current, isNull);
+    });
   });
 
   group('BleScanner', () {
@@ -147,6 +155,22 @@ void main() {
       // Wait past the stale threshold for the prune timer to fire
       await Future<void>.delayed(const Duration(milliseconds: 1200));
       expect(fastScanner.discoveredRobots, isEmpty);
+    });
+
+    test('startScan with clearExisting wipes discovered maps', () async {
+      final candidate = DiscoveredRobot(
+        id: 'dev_old',
+        name: 'Fabrica-Old',
+        rawRssi: -50,
+        smoothedRssi: -50,
+        lastSeen: DateTime.now(),
+      );
+      transport.emitDiscoveredRobots([candidate]);
+      await pumpEventQueue();
+      expect(scanner.discoveredRobots.length, equals(1));
+
+      await scanner.startScan(clearExisting: true);
+      expect(scanner.discoveredRobots, isEmpty);
     });
   });
 }

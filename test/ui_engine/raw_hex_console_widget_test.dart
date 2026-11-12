@@ -139,6 +139,30 @@ void main() {
       expect(mockTransport.writtenControlPointPayloads.length, equals(2));
       expect(mockTransport.writtenControlPointPayloads.last, equals([0x03]));
       expect(mockTransport.writtenControlPointNoResponse.last, isTrue);
+
+      // Tap quick action chips: Snapshot, Stream toggle, Identify, Get config
+      await tester.tap(find.text('SNAPSHOT (0x10)'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('PAUSE STREAM (0x11)'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('IDENTIFY (0x0E)'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('GET CONFIG (0x0B)'));
+      await tester.pumpAndSettle();
+
+      // Test odd hex string error
+      await tester.enterText(textField, 'A');
+      await tester.tap(sendButton);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('ERR: Odd hex string length'), findsOneWidget);
+
+      // Test Clear button
+      final clearBtn = find.widgetWithText(TextButton, 'CLEAR');
+      await tester.tap(clearBtn);
+      await tester.pumpAndSettle();
     });
   });
 }

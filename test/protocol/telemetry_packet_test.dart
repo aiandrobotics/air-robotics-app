@@ -106,5 +106,43 @@ void main() {
       expect(decoded.errorCode, equals(original.errorCode));
       expect(decoded.sequenceCounter, equals(original.sequenceCounter));
     });
+
+    test('enums fallback and display names', () {
+      expect(SystemState.fromValue(99), equals(SystemState.error));
+      expect(SystemState.error.displayName, equals('ERROR'));
+      expect(SystemState.calibrating.displayName, equals('CALIBRATING'));
+      expect(SystemState.idle.displayName, equals('IDLE'));
+      expect(SystemState.runningMotion.displayName, equals('RUNNING_MOTION'));
+      expect(SystemState.estop.displayName, equals('ESTOP'));
+
+      expect(LedState.fromValue(99), equals(LedState.idle));
+      expect(CmdStatus.fromValue(99), equals(CmdStatus.errInvalidArg));
+    });
+
+    test('convenience getters and toString', () {
+      const p = TelemetryPacket(
+        systemState: SystemState.idle,
+        ledState: LedState.idle,
+        activeButtonId: 0,
+        currentStepIdx: 0,
+        totalSteps: 0,
+        stepProgressPct: 0,
+        elapsedStepTimeMs: 0,
+        channelAngles: [],
+        lastCmdStatus: CmdStatus.ok,
+        freeHeapKb: 200,
+        bleRssiDbm: -70,
+        errorCode: 0,
+        sequenceCounter: 1,
+      );
+      expect(p.isIdle, isTrue);
+      expect(p.isCalibrating, isFalse);
+      expect(p.isMotionActive, isFalse);
+      expect(p.leftFlapAngle, equals(0));
+      expect(p.rightFlapAngle, equals(0));
+      expect(p.bottomFlapAngle, equals(0));
+      expect(p.topFlapAngle, equals(0));
+      expect(p.toString(), contains('TelemetryPacket'));
+    });
   });
 }

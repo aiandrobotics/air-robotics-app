@@ -154,6 +154,20 @@ void main() {
         mockTransport.writtenControlPointPayloads.first,
         equals([0x0D, 0x00, 0x00]),
       );
+
+      // Tap HOME ALL (0x02) button
+      final homeAllBtn = find.text('HOME ALL (0x02)');
+      expect(homeAllBtn, findsOneWidget);
+      await tester.tap(homeAllBtn);
+      await tester.pumpAndSettle();
+      expect(mockTransport.writtenControlPointPayloads.any((p) => p.length == 1 && p[0] == 0x02), isTrue);
+
+      // Drag first slider
+      final sliders = find.byType(Slider);
+      expect(sliders, findsWidgets);
+      await tester.drag(sliders.first, const Offset(100, 0));
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
     });
   });
 }

@@ -21,6 +21,7 @@ class MockBleTransport implements BleTransport {
   final Map<String, List<Uint8List>> deviceWrittenControlPointPayloads = {};
 
   bool failNextConnect = false;
+  bool failNextWrite = false;
   int negotiatedMtu = 517;
 
   @override
@@ -117,6 +118,10 @@ class MockBleTransport implements BleTransport {
 
   @override
   Future<void> writeControlPoint(Uint8List bytes, {bool withoutResponse = false}) async {
+    if (failNextWrite) {
+      failNextWrite = false;
+      throw StateError('Simulated write failure');
+    }
     writtenControlPointPayloads.add(bytes);
     writtenControlPointNoResponse.add(withoutResponse);
     if (_connectedRobot != null) {
@@ -159,6 +164,16 @@ class MockBleTransport implements BleTransport {
     final key = characteristicUuid.toLowerCase();
     _characteristicStreamControllers[key]?.add(data);
   }
+
+  /// Programmatically emits an error on characteristic notification stream for testing.
+  void emitCharacteristicError(String characteristicUuid, Object error) {
+    final key = characteristicUuid.toLowerCase();
+    _characteristicStreamControllers[key]?.addError(error);
+  }
+
+  /// Programmatically emits characteristic error for testing.
+  void emitTelemetryError(Object error) =>
+      emitCharacteristicError(BleUuids.charTelemetryStream, error);
 
   void _updateState(BleConnectionState newState) {
     _state = newState;

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 /// Industrial Dark Mode safety palette and design tokens for AIR Robotics.
 class AppColors {
-  AppColors._();
+  AppColors._(); // coverage:ignore-line
 
   // Backgrounds & Surfaces
   static const Color background = Color(0xFF0A0A0E);

@@ -147,6 +147,20 @@ void main() {
       // 8. Factory reset all (0x1F)
       await pipeline.factoryResetAll();
       expect(mockTransport.writtenControlPointPayloads.last, equals([0x1F]));
+
+      // 9. Jog motor with response (withoutResponse = false)
+      final fJogWithResponse = pipeline.jogMotor(channel: 2, angleDeg: 45, withoutResponse: false);
+      telemetryBus.ingestBytes(makeAckPacket().toBytes());
+      await fJogWithResponse;
+      expect(mockTransport.writtenControlPointPayloads.last, equals([0x0D, 0x02, 45]));
+
+      // 10. sendRawControlPoint
+      await pipeline.sendRawControlPoint(Uint8List.fromList([0x1F]), withoutResponse: true);
+      expect(mockTransport.writtenControlPointPayloads.last, equals([0x1F]));
+
+      // 11. CommandExecutionException toString
+      final ex = CommandExecutionException(CmdStatus.errInvalidArg);
+      expect(ex.toString(), contains('errInvalidArg'));
     });
   });
 }

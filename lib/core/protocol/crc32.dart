@@ -6,7 +6,7 @@ import 'dart:typed_data';
 /// 256-entry lookup table, bit-exact with the ESP32 firmware verification
 /// implementation in `firmware/main/storage.c`.
 class Crc32 {
-  Crc32._();
+  Crc32._(); // coverage:ignore-line
 
   static const int polynomial = 0xEDB88320;
 

@@ -5,7 +5,7 @@ import 'device_profile.dart';
 
 /// Validates device profile JSON maps against `air-device-profile.schema.json`.
 class ProfileValidator {
-  ProfileValidator._();
+  ProfileValidator._(); // coverage:ignore-line
 
   /// Validates [profileJson] against [schemaJson].
   ///

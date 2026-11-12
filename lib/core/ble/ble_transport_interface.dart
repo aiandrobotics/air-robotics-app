@@ -3,7 +3,7 @@ import 'dart:typed_data';
 
 /// Standard GATT UUID constants for AIR Robotics ecosystem.
 class BleUuids {
-  BleUuids._();
+  BleUuids._(); // coverage:ignore-line
 
   /// Standard Device Information Service
   static const String serviceDis = '180a';

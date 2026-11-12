@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:air_robotics_app/core/protocol/routine_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -35,8 +37,24 @@ void main() {
     });
 
     test('bounds checks channel ids', () {
+      expect(() => FoldStep.single(-1), throwsRangeError);
       expect(() => FoldStep.single(16), throwsRangeError);
+      expect(() => FoldStep.dual(-1, 0), throwsRangeError);
+      expect(() => FoldStep.dual(0, -1), throwsRangeError);
       expect(() => FoldStep.dual(0, 16), throwsRangeError);
+    });
+
+    test('FoldStep equality, hashCode, toString, and insufficient bytes error', () {
+      final s1 = FoldStep.single(2);
+      final s2 = FoldStep.single(2);
+      final s3 = FoldStep.dual(2, 3);
+
+      expect(s1, equals(s2));
+      expect(s1.hashCode, equals(s2.hashCode));
+      expect(s1 == s3, isFalse);
+      expect(s1.toString(), contains('FoldStep'));
+
+      expect(() => FoldStep.fromBytes(Uint8List.fromList([1, 2])), throwsArgumentError);
     });
   });
 
@@ -90,6 +108,15 @@ void main() {
       expect(compact.length, equals(7));
       expect(compact[0], equals(2));
     });
+
+    test('validates step bounds and fromSteps alias', () {
+      expect(() => FoldRoutine.create([]), throwsArgumentError);
+      final manySteps = List.generate(17, (i) => FoldStep.single(0));
+      expect(() => FoldRoutine.create(manySteps), throwsArgumentError);
+
+      final alias = FoldRoutine.fromSteps([FoldStep.single(1)]);
+      expect(alias.stepCount, equals(1));
+    });
   });
 
   group('ButtonConfigTable Model (FAB3 212-byte table)', () {
@@ -112,6 +139,10 @@ void main() {
       expect(decoded.routines[2]!.steps[0].motorIds[0], equals(1));
       expect(decoded.routines[3]!.steps[0].motorIds[0], equals(2));
       expect(decoded.routines[4]!.steps[0].motorIds[0], equals(3));
+    });
+
+    test('ButtonConfigTable throws on insufficient bytes', () {
+      expect(() => ButtonConfigTable.fromBytes(Uint8List(211)), throwsArgumentError);
     });
   });
 }
