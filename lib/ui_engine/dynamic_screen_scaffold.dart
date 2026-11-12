@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/ble/ble_providers.dart';
 import '../core/ble/ble_transport_interface.dart';
 import '../core/ble/developer_debug_screen.dart';
+import '../core/fleet/fleet_providers.dart';
 import '../core/profile/device_profile.dart';
 import '../core/profile/profile_providers.dart';
 import '../core/protocol/protocol_providers.dart';
@@ -153,9 +154,17 @@ class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
                   backgroundColor: AppColors.crimson,
                 ),
               );
+              final robotId =
+                  ref.read(bleConnectionManagerProvider).connectedRobot?.id;
               try {
                 await ref.read(commandPipelineProvider).factoryResetAll();
               } catch (_) {}
+              if (robotId != null) {
+                try {
+                  await ref.read(bleTransportProvider).removeBond(robotId);
+                } catch (_) {}
+                ref.read(registeredRobotsProvider.notifier).removeRobot(robotId);
+              }
               await ref.read(bleConnectionManagerProvider).disconnect();
               ref.read(isViewingDeviceProvider.notifier).closeDevice();
             },
