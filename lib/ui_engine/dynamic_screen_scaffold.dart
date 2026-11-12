@@ -26,6 +26,77 @@ class DynamicScreenScaffold extends ConsumerStatefulWidget {
 class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
   int _selectedScreenIndex = 0;
 
+  void _confirmErasePresets(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTokens.radiusLg),
+          side: const BorderSide(color: AppColors.border),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: AppColors.amber, size: 24),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Erase All Presets in Firmware?',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: const Text(
+          'This will send opcode 0x0C to Fabrica to erase all custom routine sequences from NVS flash memory and reset all button slots back to factory defaults.\n\nAre you sure you want to proceed?',
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('CANCEL', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.crimson,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Erasing presets in firmware (0x0C)...'),
+                  duration: Duration(seconds: 1),
+                ),
+              );
+              try {
+                await ref.read(commandPipelineProvider).restoreFactoryPresets();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('All presets successfully erased and restored to factory defaults.'),
+                      backgroundColor: AppColors.emerald,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to erase presets in firmware: $e'),
+                      backgroundColor: AppColors.crimson,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('ERASE IN FIRMWARE'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _confirmDisconnect(BuildContext context) {
     showDialog<void>(
       context: context,
@@ -131,6 +202,11 @@ class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
             ],
           ),
           actions: [
+            IconButton(
+              icon: const Icon(Icons.delete_sweep, size: 22, color: AppColors.crimson),
+              tooltip: 'Erase Presets in Firmware',
+              onPressed: () => _confirmErasePresets(context),
+            ),
             IconButton(
               icon: const Icon(Icons.link_off, size: 20, color: AppColors.textSecondary),
               tooltip: 'Disconnect Robot',

@@ -37,14 +37,33 @@ class PresetGridWidget extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (config.title.isNotEmpty) ...[
-          Text(
-            config.title.toUpperCase(),
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: AppColors.cyan,
-              letterSpacing: 0.8,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                config.title.toUpperCase(),
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.cyan,
+                  letterSpacing: 0.8,
+                ),
+              ),
+              TextButton.icon(
+                style: TextButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  foregroundColor: AppColors.crimson,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                ),
+                icon: const Icon(Icons.delete_sweep, size: 14),
+                label: const Text(
+                  'ERASE PRESETS',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                ),
+                onPressed: () => _confirmErasePresets(context, ref),
+              ),
+            ],
           ),
           const SizedBox(height: AppTokens.space8),
         ],
@@ -88,6 +107,81 @@ class PresetGridWidget extends ConsumerWidget {
         ),
       ],
     );
+  }
+
+  Future<void> _confirmErasePresets(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: AppColors.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTokens.radiusLg),
+            side: const BorderSide(color: AppColors.border),
+          ),
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: AppColors.amber, size: 24),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Erase All Presets in Firmware?',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          content: const Text(
+            'This will send opcode 0x0C to Fabrica to erase all custom routine sequences from NVS flash memory and reset all button slots back to factory defaults.\n\nAre you sure you want to proceed?',
+            style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('CANCEL', style: TextStyle(color: AppColors.textSecondary)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.crimson,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('ERASE IN FIRMWARE'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Erasing presets in firmware (0x0C)...'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+
+      try {
+        await ref.read(commandPipelineProvider).restoreFactoryPresets();
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('All presets successfully erased and restored to factory defaults.'),
+              backgroundColor: AppColors.emerald,
+            ),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to erase presets in firmware: $e'),
+              backgroundColor: AppColors.crimson,
+            ),
+          );
+        }
+      }
+    }
   }
 }
 

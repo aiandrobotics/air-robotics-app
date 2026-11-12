@@ -84,11 +84,13 @@ void main() {
           container: container,
           child: const MaterialApp(
             home: Scaffold(
-              body: PresetGridWidget(
-                config: AirWidgetConfig(
-                  type: 'preset-grid',
-                  title: 'Folding Presets',
-                  props: {'columns': 2},
+              body: SingleChildScrollView(
+                child: PresetGridWidget(
+                  config: AirWidgetConfig(
+                    type: 'preset-grid',
+                    title: 'Folding Presets',
+                    props: {'columns': 2},
+                  ),
                 ),
               ),
             ),
@@ -143,10 +145,12 @@ void main() {
           container: container,
           child: const MaterialApp(
             home: Scaffold(
-              body: PresetGridWidget(
-                config: AirWidgetConfig(
-                  type: 'preset-grid',
-                  props: {'columns': 2},
+              body: SingleChildScrollView(
+                child: PresetGridWidget(
+                  config: AirWidgetConfig(
+                    type: 'preset-grid',
+                    props: {'columns': 2},
+                  ),
                 ),
               ),
             ),
@@ -164,6 +168,79 @@ void main() {
 
       expect(mockTransport.writtenControlPointPayloads.length, equals(1));
       expect(mockTransport.writtenControlPointPayloads.first, equals([0x02]));
+    });
+
+    testWidgets('prompts confirmation and dispatches restoreFactoryPresets opcode 0x0C',
+        (tester) async {
+      final container = ProviderContainer(
+        overrides: [
+          bleTransportProvider.overrideWithValue(mockTransport),
+          commandPipelineProvider.overrideWithValue(
+            CommandPipeline(transport: mockTransport),
+          ),
+          latestTelemetryProvider.overrideWith(
+            (ref) => Stream.value(
+              makeTestPacket(systemState: SystemState.idle),
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.read(activeProfileProvider.notifier).selectProfile(profile);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: PresetGridWidget(
+                  config: AirWidgetConfig(
+                    type: 'preset-grid',
+                    title: 'Folding Presets',
+                    props: {'columns': 2},
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Find ERASE PRESETS button
+      final eraseBtn = find.text('ERASE PRESETS');
+      expect(eraseBtn, findsOneWidget);
+
+      // Tap ERASE PRESETS -> dialog shows
+      await tester.tap(eraseBtn);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Erase All Presets in Firmware?'), findsOneWidget);
+      expect(
+        find.text(
+          'This will send opcode 0x0C to Fabrica to erase all custom routine sequences from NVS flash memory and reset all button slots back to factory defaults.\n\nAre you sure you want to proceed?',
+        ),
+        findsOneWidget,
+      );
+
+      // Tap CANCEL -> dialog dismisses without sending opcode
+      await tester.tap(find.text('CANCEL'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Erase All Presets in Firmware?'), findsNothing);
+      expect(mockTransport.writtenControlPointPayloads, isEmpty);
+
+      // Tap ERASE PRESETS again and confirm
+      await tester.tap(eraseBtn);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('ERASE IN FIRMWARE'));
+      await tester.pumpAndSettle();
+
+      // Verify opcode 0x0C was dispatched
+      expect(mockTransport.writtenControlPointPayloads.length, equals(1));
+      expect(mockTransport.writtenControlPointPayloads.first, equals([0x0C]));
     });
   });
 }
