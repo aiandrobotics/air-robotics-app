@@ -47,6 +47,7 @@ void main() {
       expect(find.text('SUPPORTED ROBOTS'), findsOneWidget);
       expect(find.text('FABRICA'), findsOneWidget);
       expect(find.text('Cloths Folding Robot'), findsOneWidget);
+      expect(find.textContaining('Press and hold Button 1 for 3 seconds'), findsOneWidget);
       expect(find.text('PAIR FABRICA NOW'), findsOneWidget);
 
       // Verify removed elements are NOT present
@@ -86,8 +87,8 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.text('PAIR FABRICA-DEVKIT-V1'), findsOneWidget);
-      expect(find.text('PAIRING PROCEDURE'), findsOneWidget);
-      expect(find.textContaining('Adding 2nd–4th Devices: Press and hold Button 1'), findsOneWidget);
+      expect(find.text('FABRICA PAIRING INSTRUCTIONS'), findsOneWidget);
+      expect(find.text('Press and hold Button 1 for 3 seconds to enter pairing mode.'), findsOneWidget);
     });
 
     testWidgets('displays auto discovered robot at top when detected and jumps to pair screen on tap',
@@ -140,7 +141,7 @@ void main() {
 
       // Verified jumped to PairRobotScreen
       expect(find.text('PAIR FABRICA-DEVKIT-V1'), findsOneWidget);
-      expect(find.text('PAIRING PROCEDURE'), findsOneWidget);
+      expect(find.text('FABRICA PAIRING INSTRUCTIONS'), findsOneWidget);
     });
   });
 }

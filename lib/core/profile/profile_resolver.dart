@@ -66,8 +66,11 @@ class ProfileResolver {
 
   Future<DeviceProfile?> _tryLoadBundledAsset(String modelNumber) async {
     final slug = modelNumber.toLowerCase().replaceAll(RegExp(r'\s+'), '-');
-    final assetPath =
-        _bundledAssetMap[slug] ?? 'assets/profiles/$slug.json';
+    String? assetPath = _bundledAssetMap[slug];
+    if (assetPath == null && slug.startsWith('fabrica')) {
+      assetPath = 'assets/profiles/fabrica-devkit-v1.json';
+    }
+    assetPath ??= 'assets/profiles/$slug.json';
 
     try {
       final profileString = await _bundle.loadString(assetPath);

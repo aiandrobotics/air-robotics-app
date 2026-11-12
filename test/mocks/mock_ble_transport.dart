@@ -18,6 +18,7 @@ class MockBleTransport implements BleTransport {
   final List<Uint8List> writtenControlPointPayloads = [];
   final List<bool> writtenControlPointNoResponse = [];
   final Map<String, List<Uint8List>> writtenCharacteristics = {};
+  final Map<String, List<Uint8List>> deviceWrittenControlPointPayloads = {};
 
   bool failNextConnect = false;
   int negotiatedMtu = 517;
@@ -118,6 +119,11 @@ class MockBleTransport implements BleTransport {
   Future<void> writeControlPoint(Uint8List bytes, {bool withoutResponse = false}) async {
     writtenControlPointPayloads.add(bytes);
     writtenControlPointNoResponse.add(withoutResponse);
+    if (_connectedRobot != null) {
+      deviceWrittenControlPointPayloads
+          .putIfAbsent(_connectedRobot!.id, () => [])
+          .add(bytes);
+    }
   }
 
   @override

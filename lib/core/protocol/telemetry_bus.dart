@@ -85,10 +85,11 @@ class TelemetryBus {
     }
   }
 
-  /// Stops listening to transport notifications.
+  /// Stops listening to transport notifications and clears cached packets.
   void stop() {
     _transportSub?.cancel();
     _transportSub = null;
+    resetMetrics();
   }
 
   /// Ingests a raw byte buffer (expected 31 bytes), decodes it into a [TelemetryPacket],
@@ -145,12 +146,13 @@ class TelemetryBus {
     _metricsController.add(_currentMetrics);
   }
 
-  /// Resets all counters and rolling history.
+  /// Resets all counters, cached packet, and rolling history.
   void resetMetrics() {
     _totalPackets = 0;
     _droppedPackets = 0;
     _lastSequenceCounter = null;
     _recentTimestamps.clear();
+    _latestPacket = null;
     _currentMetrics = const TelemetryMetrics();
     _metricsController.add(_currentMetrics);
   }

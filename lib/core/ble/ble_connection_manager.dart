@@ -44,13 +44,18 @@ class BleConnectionManager {
 
   /// Connects to [robot], requests 517B MTU, establishes SMP bonding,
   /// discovers GATT services, and enters [BleConnectionState.ready].
+  ///
+  /// If currently connected to another robot, cleanly disconnects first to isolate
+  /// device state and guarantee all commands and telemetry target the new device.
   Future<void> connect(DiscoveredRobot robot) async {
-    if (_state == BleConnectionState.connecting ||
-        _state == BleConnectionState.connected ||
-        _state == BleConnectionState.discovering ||
-        _state == BleConnectionState.bonding ||
-        _state == BleConnectionState.ready) {
+    if (_targetRobot?.id == robot.id && _state == BleConnectionState.ready) {
       return;
+    }
+
+    if (_state != BleConnectionState.disconnected) {
+      await disconnect();
+      // Allow event loop to process disconnection listeners before initiating new link
+      await Future<void>.delayed(Duration.zero);
     }
     _manualDisconnect = false;
     _reconnectTimer?.cancel();

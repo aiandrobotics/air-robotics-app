@@ -410,6 +410,37 @@ class _AddDeviceCatalogScreenState extends ConsumerState<AddDeviceCatalogScreen>
                 height: 1.35,
               ),
             ),
+            const SizedBox(height: AppTokens.space12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.amber.withValues(alpha: 0.1),
+                borderRadius: AppTokens.borderRadiusSm,
+                border: Border.all(
+                  color: AppColors.amber.withValues(alpha: 0.3),
+                ),
+              ),
+              child: const Row(
+                children: [
+                  Icon(
+                    Icons.touch_app_outlined,
+                    size: 16,
+                    color: AppColors.amber,
+                  ),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Pairing mode: Press and hold Button 1 for 3 seconds.',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppColors.amber,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: AppTokens.space16),
             SizedBox(
               width: double.infinity,

@@ -573,7 +573,7 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
           ),
           const SizedBox(height: AppTokens.space4),
           const Text(
-            'New robots (0 bonds) stay in pairing mode continuously until claimed. Connect your Fabrica cloth folder to view telemetry, presets, and control flap routines.',
+            'Connect your robot to view telemetry, manage presets, and control operations.',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 11,
@@ -997,7 +997,7 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
             const SizedBox(height: AppTokens.space4),
             Text(
               isScanning
-                  ? 'New robot (0 bonds): Stays in pairing mode continuously.\nAdding 2nd–4th device: Hold Button 1 for 3s (120s window).'
+                  ? 'Nearby robots will appear here automatically.'
                   : 'Your nearby robots will appear here automatically.',
               textAlign: TextAlign.center,
               style: const TextStyle(

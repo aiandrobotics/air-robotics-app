@@ -18,9 +18,8 @@ final telemetryBusProvider = Provider<TelemetryBus>((ref) {
       next.whenData((state) {
         if (state == BleConnectionState.ready) {
           bus.start();
-        } else if (state == BleConnectionState.disconnected) {
+        } else {
           bus.stop();
-          bus.resetMetrics();
         }
       });
     },

@@ -252,6 +252,14 @@ class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
     final packet =
         telemetryAsync.value ?? ref.read(telemetryBusProvider).latestPacket;
 
+    final registeredRobots = ref.watch(registeredRobotsProvider).value ?? [];
+    final connectedRobot = ref.watch(bleConnectionManagerProvider).connectedRobot;
+    final registeredMatch = registeredRobots
+        .where((r) => r.id == connectedRobot?.id)
+        .firstOrNull;
+    final headerTitle =
+        registeredMatch?.displayName ?? connectedRobot?.name ?? activeProfile.name;
+
     final screens = activeProfile.screens;
     final safeIndex = _selectedScreenIndex.clamp(
       0,
@@ -284,7 +292,7 @@ class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                activeProfile.name,
+                headerTitle,
                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               Row(

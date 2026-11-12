@@ -250,6 +250,9 @@ class _PairRobotScreenState extends ConsumerState<PairRobotScreen>
   }
 
   Widget _buildPairingInstructionsCard() {
+    final isFabrica = widget.targetModel.toLowerCase().contains('fabrica') ||
+        widget.namePrefix.toLowerCase().contains('fabrica');
+
     return Container(
       padding: AppTokens.paddingCard,
       decoration: BoxDecoration(
@@ -260,13 +263,13 @@ class _PairRobotScreenState extends ConsumerState<PairRobotScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.touch_app, color: AppColors.amber, size: 20),
-              SizedBox(width: AppTokens.space8),
+              const Icon(Icons.touch_app, color: AppColors.amber, size: 20),
+              const SizedBox(width: AppTokens.space8),
               Text(
-                'PAIRING PROCEDURE',
-                style: TextStyle(
+                isFabrica ? 'FABRICA PAIRING INSTRUCTIONS' : 'PAIRING PROCEDURE',
+                style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
                   color: AppColors.amber,
@@ -276,20 +279,27 @@ class _PairRobotScreenState extends ConsumerState<PairRobotScreen>
             ],
           ),
           const SizedBox(height: AppTokens.space12),
-          _buildInstructionStep(
-            '1',
-            'First Device (0 Bonds): Power on or reset your robot. It stays in pairing mode continuously until claimed.',
-          ),
-          const SizedBox(height: 8),
-          _buildInstructionStep(
-            '2',
-            'Adding 2nd–4th Devices: Press and hold Button 1 on Fabrica for 3 seconds to open the 120-second pairing window.',
-          ),
-          const SizedBox(height: 8),
-          _buildInstructionStep(
-            '3',
-            'Subsequent Boots: Once paired, your robot boots directly to IDLE and automatically connects to your phone.',
-          ),
+          if (isFabrica) ...[
+            _buildInstructionStep(
+              '1',
+              'Power on your Fabrica robot.',
+            ),
+            const SizedBox(height: 8),
+            _buildInstructionStep(
+              '2',
+              'Press and hold Button 1 for 3 seconds to enter pairing mode.',
+            ),
+          ] else ...[
+            _buildInstructionStep(
+              '1',
+              'Power on your ${widget.targetModel} robot.',
+            ),
+            const SizedBox(height: 8),
+            _buildInstructionStep(
+              '2',
+              'Ensure Bluetooth pairing mode is active on the device.',
+            ),
+          ],
         ],
       ),
     );
@@ -365,7 +375,7 @@ class _PairRobotScreenState extends ConsumerState<PairRobotScreen>
             const SizedBox(height: AppTokens.space4),
             Text(
               isScanning
-                  ? 'New robot (0 bonds): Stays in pairing mode continuously.\nAdding 2nd–4th device: Hold Button 1 for 3s (120s window).'
+                  ? 'Make sure your device is powered on and within range.'
                   : 'Check power switch and tap the top right icon to restart scan.',
               textAlign: TextAlign.center,
               style: const TextStyle(

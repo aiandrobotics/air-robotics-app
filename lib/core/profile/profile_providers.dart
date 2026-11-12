@@ -33,10 +33,20 @@ class ActiveProfileNotifier extends Notifier<DeviceProfile> {
         next.whenData((connState) async {
           if (connState == BleConnectionState.ready) {
             final manager = ref.read(bleConnectionManagerProvider);
-            final model = manager.gattInfo?.modelNumber;
-            if (model != null && model.isNotEmpty) {
+            String model = manager.gattInfo?.modelNumber ?? '';
+            if (model.isEmpty) {
+              final name = manager.connectedRobot?.name ?? '';
+              if (name.toLowerCase().contains('fabrica')) {
+                model = 'Fabrica-DevKit-v1';
+              } else if (name.isNotEmpty) {
+                model = name;
+              }
+            }
+            if (model.isNotEmpty) {
               final resolved = await resolver.resolveProfile(model);
-              state = resolved;
+              if (ref.mounted) {
+                state = resolved;
+              }
             }
           }
         });
@@ -51,7 +61,9 @@ class ActiveProfileNotifier extends Notifier<DeviceProfile> {
         currentModel.isNotEmpty) {
       Future.microtask(() async {
         final resolved = await resolver.resolveProfile(currentModel);
-        state = resolved;
+        if (ref.mounted) {
+          state = resolved;
+        }
       });
     }
 

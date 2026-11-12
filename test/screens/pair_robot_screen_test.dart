@@ -47,10 +47,9 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.text('PAIR FABRICA-DEVKIT-V1'), findsOneWidget);
-      expect(find.text('PAIRING PROCEDURE'), findsOneWidget);
-      expect(find.textContaining('First Device (0 Bonds): Power on or reset your robot. It stays in pairing mode continuously'), findsOneWidget);
-      expect(find.textContaining('Adding 2nd–4th Devices: Press and hold Button 1'), findsOneWidget);
-      expect(find.textContaining('Subsequent Boots: Once paired, your robot boots directly to IDLE'), findsOneWidget);
+      expect(find.text('FABRICA PAIRING INSTRUCTIONS'), findsOneWidget);
+      expect(find.textContaining('Power on your Fabrica robot'), findsOneWidget);
+      expect(find.textContaining('Press and hold Button 1 for 3 seconds to enter pairing mode'), findsOneWidget);
       expect(find.text('DISCOVERED CANDIDATES'), findsOneWidget);
       expect(find.textContaining('Searching for Fabrica-DevKit-v1'), findsOneWidget);
 

@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:air_robotics_app/core/ble/ble_providers.dart';
 import 'package:air_robotics_app/core/ble/developer_debug_screen.dart';
+import 'package:air_robotics_app/core/fleet/fleet_providers.dart';
+import 'package:air_robotics_app/core/fleet/fleet_storage_service.dart';
 import 'package:air_robotics_app/core/profile/profile_providers.dart';
 import 'package:air_robotics_app/core/profile/profile_validator.dart';
 import 'package:air_robotics_app/core/protocol/command_pipeline.dart';
@@ -16,13 +18,16 @@ import '../mocks/mock_ble_transport.dart';
 void main() {
   group('DynamicScreenScaffold Dynamic Layout Tests', () {
     late MockBleTransport mockTransport;
+    late InMemoryFleetStorageService mockFleetStorage;
 
     setUp(() {
       mockTransport = MockBleTransport();
+      mockFleetStorage = InMemoryFleetStorageService();
     });
 
     tearDown(() {
       mockTransport.dispose();
+      mockFleetStorage.close();
     });
 
     testWidgets('renders adaptive navigation and switches screens dynamically',
@@ -48,6 +53,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           bleTransportProvider.overrideWithValue(mockTransport),
+          fleetStorageProvider.overrideWithValue(mockFleetStorage),
           commandPipelineProvider.overrideWithValue(
             CommandPipeline(transport: mockTransport),
           ),
@@ -127,6 +133,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           bleTransportProvider.overrideWithValue(mockTransport),
+          fleetStorageProvider.overrideWithValue(mockFleetStorage),
           commandPipelineProvider.overrideWithValue(
             CommandPipeline(transport: mockTransport),
           ),
