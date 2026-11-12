@@ -339,7 +339,7 @@ class _DeveloperDebugScreenState extends ConsumerState<DeveloperDebugScreen> {
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: const Text(
-                                'PAIRING MODE ACTIVE (120s)',
+                                'PAIRING MODE ACTIVE',
                                 style: TextStyle(
                                   fontSize: 9,
                                   fontWeight: FontWeight.bold,

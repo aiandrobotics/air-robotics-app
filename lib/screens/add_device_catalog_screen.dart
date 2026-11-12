@@ -502,7 +502,7 @@ class _AddDeviceCatalogScreenState extends ConsumerState<AddDeviceCatalogScreen>
             const SizedBox(height: AppTokens.space4),
             Text(
               isScanning
-                  ? 'First robot: Simply power on (auto-pairs for 120s on boot).\n2nd device onwards: Hold Button 1 for 3s to enter pairing mode.'
+                  ? 'New robot (0 bonds): Stays in pairing mode continuously.\nAdding 2nd–4th device: Hold Button 1 for 3s (120s window).'
                   : 'Check power switch and tap refresh in the top right to scan.',
               textAlign: TextAlign.center,
               style: const TextStyle(

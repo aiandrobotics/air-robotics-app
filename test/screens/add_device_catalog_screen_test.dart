@@ -83,7 +83,7 @@ void main() {
 
       expect(find.text('PAIR FABRICA-DEVKIT-V1'), findsOneWidget);
       expect(find.text('PAIRING PROCEDURE'), findsOneWidget);
-      expect(find.textContaining('From 2nd Device Onwards: Press and hold Button 1'), findsOneWidget);
+      expect(find.textContaining('Adding 2nd–4th Devices: Press and hold Button 1'), findsOneWidget);
     });
 
     testWidgets('displays discovered robots at top and enables 1-tap direct pairing',
