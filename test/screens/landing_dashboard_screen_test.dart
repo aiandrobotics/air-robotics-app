@@ -61,30 +61,6 @@ void main() {
       expect(find.text('AUTO-SCANNING'), findsOneWidget);
     });
 
-    testWidgets('info button opens local hardware permission rationale dialog',
-        (tester) async {
-      await tester.binding.setSurfaceSize(const Size(600, 1000));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-
-      await tester.pumpWidget(createTestApp());
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
-
-      await tester.tap(find.byTooltip('Permission & Privacy Info'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
-
-      expect(find.text('Local Hardware Access'), findsOneWidget);
-      expect(find.textContaining('100% Offline'), findsOneWidget);
-      expect(find.textContaining('Zero Tracking'), findsOneWidget);
-
-      await tester.tap(find.text('UNDERSTOOD'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
-
-      expect(find.text('Local Hardware Access'), findsNothing);
-    });
-
     testWidgets('renders registered robots in Your Devices and auto-connects when detected in scan',
         (tester) async {
       await tester.binding.setSurfaceSize(const Size(600, 1000));

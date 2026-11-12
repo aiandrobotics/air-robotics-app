@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/ble/ble_providers.dart';
 import '../core/ble/ble_transport_interface.dart';
-import '../core/ble/developer_debug_screen.dart';
 import '../core/fleet/fleet_providers.dart';
 import '../core/fleet/registered_robot.dart';
 import '../core/theme/app_colors.dart';
@@ -104,48 +103,6 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
         setState(() => _isAutoConnecting = false);
       }
     }
-  }
-
-  void _showPermissionInfo(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: const Row(
-          children: [
-            Icon(Icons.bluetooth_searching, color: AppColors.cyan, size: 24),
-            SizedBox(width: AppTokens.space8),
-            Flexible(child: Text('Local Hardware Access')),
-          ],
-        ),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'AIR Robotics uses Bluetooth Low Energy (BLE) strictly for direct local radio communication with your robot.\n',
-              style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-            ),
-            Text(
-              '• 100% Offline: Commands travel directly over the air without internet.\n'
-              '• Zero Tracking: Your device location and identities are never recorded.\n'
-              '• No Cloud Account: All garment sequences are stored locally on your device.',
-              style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-            ),
-          ],
-        ),
-        actions: [
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.cyan,
-              foregroundColor: Colors.black,
-            ),
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('UNDERSTOOD'),
-          ),
-        ],
-      ),
-    );
   }
 
   Future<void> _connectToDiscoveredRobot(DiscoveredRobot robot) async {
@@ -369,24 +326,6 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.info_outline, size: 20),
-            tooltip: 'Permission & Privacy Info',
-            onPressed: () => _showPermissionInfo(context),
-          ),
-          IconButton(
-            icon: const Icon(Icons.bug_report, size: 20),
-            tooltip: 'BLE Hardware Debugger',
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (context) => const DeveloperDebugScreen(),
-                ),
-              );
-            },
-          ),
-        ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -522,7 +461,7 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
                       ),
                       SizedBox(height: 3),
                       Text(
-                        'Pair Fabrica cloth folder or AIR ecosystem robots',
+                        'Pair Fabrica cloth folder or other AIR robots',
                         style: TextStyle(
                           fontSize: 11,
                           color: AppColors.textSecondary,

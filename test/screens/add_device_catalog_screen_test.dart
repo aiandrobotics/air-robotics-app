@@ -52,8 +52,8 @@ void main() {
       expect(find.text('4 Flap Servos'), findsOneWidget);
       expect(find.text('PAIR FABRICA NOW'), findsOneWidget);
 
-      // Future ecosystem cards
-      expect(find.text('UPCOMING ECOSYSTEM'), findsOneWidget);
+      // Future upcoming robot cards
+      expect(find.text('UPCOMING ROBOTS'), findsOneWidget);
       expect(find.text('AIR ARM-X1'), findsOneWidget);
       expect(find.text('AIR ROVER-S'), findsOneWidget);
     });

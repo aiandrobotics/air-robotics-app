@@ -226,13 +226,13 @@ class _AddDeviceCatalogScreenState extends ConsumerState<AddDeviceCatalogScreen>
 
               const SizedBox(height: AppTokens.space24),
 
-              // 3. UPCOMING ECOSYSTEM SECTION (FUTURE VISION)
+              // 3. UPCOMING ROBOTS SECTION (FUTURE VISION)
               const Row(
                 children: [
                   Icon(Icons.auto_awesome, size: 14, color: AppColors.purple),
                   SizedBox(width: AppTokens.space4),
                   Text(
-                    'UPCOMING ECOSYSTEM',
+                    'UPCOMING ROBOTS',
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
