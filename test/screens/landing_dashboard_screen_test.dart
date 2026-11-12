@@ -161,7 +161,7 @@ void main() {
 
       expect(find.widgetWithText(AppBar, 'ADD NEW ROBOT'), findsOneWidget);
       expect(find.text('FABRICA'), findsOneWidget);
-      expect(find.text('SUPPORTED ROBOTS (DAY 1)'), findsOneWidget);
+      expect(find.text('SUPPORTED ROBOTS'), findsOneWidget);
     });
   });
 }
