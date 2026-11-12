@@ -104,10 +104,13 @@ void main() {
     });
 
     test('returns empty list if profile box fails to open', () async {
-      await Hive.close();
-      final brokenStorage = HiveProfileStorageService();
+      final brokenStorage = HiveProfileStorageService(
+        boxOpener: (_) => Future.error(Exception('Box failed to open')),
+      );
       final models = await brokenStorage.listStoredModels();
       expect(models, isEmpty);
+      expect(await brokenStorage.getCalibration('Fabrica-DevKit-v1'), isNull);
+      await brokenStorage.saveCalibration('Fabrica-DevKit-v1', {0: 10});
     });
   });
 }

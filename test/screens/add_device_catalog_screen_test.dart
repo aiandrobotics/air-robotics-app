@@ -35,8 +35,8 @@ void main() {
             bleTransportProvider.overrideWithValue(mockTransport),
             fleetStorageProvider.overrideWithValue(mockFleetStorage),
           ],
-          child: const MaterialApp(
-            home: AddDeviceCatalogScreen(),
+          child: MaterialApp(
+            home: AddDeviceCatalogScreen(key: UniqueKey()),
           ),
         ),
       );
@@ -74,8 +74,8 @@ void main() {
             bleTransportProvider.overrideWithValue(mockTransport),
             fleetStorageProvider.overrideWithValue(mockFleetStorage),
           ],
-          child: const MaterialApp(
-            home: AddDeviceCatalogScreen(),
+          child: MaterialApp(
+            home: AddDeviceCatalogScreen(key: UniqueKey()),
           ),
         ),
       );
@@ -89,6 +89,7 @@ void main() {
       expect(find.text('PAIR FABRICA-DEVKIT-V1'), findsOneWidget);
       expect(find.text('FABRICA PAIRING INSTRUCTIONS'), findsOneWidget);
       expect(find.text('Press and hold Button 1 for 3 seconds to enter pairing mode.'), findsOneWidget);
+      expect(find.text('The status LED will blink rapidly to confirm pairing mode is active.'), findsOneWidget);
     });
 
     testWidgets('displays auto discovered robot at top when detected and jumps to pair screen on tap',
@@ -102,8 +103,8 @@ void main() {
             bleTransportProvider.overrideWithValue(mockTransport),
             fleetStorageProvider.overrideWithValue(mockFleetStorage),
           ],
-          child: const MaterialApp(
-            home: AddDeviceCatalogScreen(),
+          child: MaterialApp(
+            home: AddDeviceCatalogScreen(key: UniqueKey()),
           ),
         ),
       );
@@ -154,8 +155,8 @@ void main() {
             bleTransportProvider.overrideWithValue(mockTransport),
             fleetStorageProvider.overrideWithValue(mockFleetStorage),
           ],
-          child: const MaterialApp(
-            home: AddDeviceCatalogScreen(),
+          child: MaterialApp(
+            home: AddDeviceCatalogScreen(key: UniqueKey()),
           ),
         ),
       );

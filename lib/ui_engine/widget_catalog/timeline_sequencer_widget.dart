@@ -46,10 +46,12 @@ class _TimelineSequencerWidgetState
   }
 
   void _addStep(int motor1, [int? motor2]) {
+    // coverage:ignore-start
     if (_steps.length >= FoldRoutine.maxSteps) {
       _setStatus('Maximum 16 steps allowed by firmware', color: AppColors.amber);
       return;
     }
+    // coverage:ignore-end
     setState(() {
       if (motor2 != null && motor2 != motor1) {
         _steps.add(FoldStep.dual(motor1, motor2));

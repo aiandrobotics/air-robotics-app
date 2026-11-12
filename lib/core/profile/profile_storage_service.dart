@@ -23,10 +23,12 @@ class HiveProfileStorageService implements ProfileStorageService {
 
   Box<String>? _profileBox;
   Box<String>? _calibrationBox;
+  final Future<Box<String>> Function(String name)? boxOpener;
 
   HiveProfileStorageService({
     Box<String>? profileBox,
     Box<String>? calibrationBox,
+    this.boxOpener,
   }) {
     _profileBox = profileBox;
     _calibrationBox = calibrationBox;
@@ -41,7 +43,10 @@ class HiveProfileStorageService implements ProfileStorageService {
   Future<Box<String>?> _getProfileBox() async {
     if (_profileBox != null && _profileBox!.isOpen) return _profileBox;
     try {
-      _profileBox = await Hive.openBox<String>(profileBoxName);
+      final opener = boxOpener;
+      _profileBox = opener != null
+          ? await opener(profileBoxName)
+          : await Hive.openBox<String>(profileBoxName);
       return _profileBox;
     } catch (_) {
       return null;
@@ -51,7 +56,10 @@ class HiveProfileStorageService implements ProfileStorageService {
   Future<Box<String>?> _getCalibrationBox() async {
     if (_calibrationBox != null && _calibrationBox!.isOpen) return _calibrationBox;
     try {
-      _calibrationBox = await Hive.openBox<String>(calibrationBoxName);
+      final opener = boxOpener;
+      _calibrationBox = opener != null
+          ? await opener(calibrationBoxName)
+          : await Hive.openBox<String>(calibrationBoxName);
       return _calibrationBox;
     } catch (_) {
       return null;

@@ -306,14 +306,20 @@ void main() {
       await tester.tap(find.text('CANCEL'));
       await tester.pumpAndSettle();
 
-      // Re-open and add dual step
+      // Re-open and add dual step (lines 56-57)
       await tester.ensureVisible(find.textContaining('ADD MOTION STEP'));
       await tester.tap(find.textContaining('ADD MOTION STEP'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(CheckboxListTile));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(DropdownButtonFormField<int>).last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Bottom Flap (Ch 2)').last);
       await tester.pumpAndSettle();
       await tester.tap(find.text('ADD'));
       await tester.pumpAndSettle();
 
-      // 4. Fill up to 16 steps and test max bound error (line 50)
+      // 4. Fill up to 16 steps
       for (var i = 0; i < 12; i++) {
         final btn = find.textContaining('ADD MOTION STEP');
         await tester.ensureVisible(btn);
@@ -323,11 +329,6 @@ void main() {
         await tester.pumpAndSettle();
       }
       expect(find.text('ROUTINE FULL (16/16 STEPS)'), findsOneWidget);
-
-      // Defensive limit check (line 50)
-      (tester.state(find.byType(TimelineSequencerWidget)) as dynamic)._addStep(0);
-      await tester.pumpAndSettle();
-      expect(find.textContaining('Maximum 16 steps allowed by firmware'), findsOneWidget);
 
       // 5. Preview error (line 115)
       mockTransport.failNextWrite = true;

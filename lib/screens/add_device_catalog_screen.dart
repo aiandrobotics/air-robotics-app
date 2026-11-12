@@ -430,7 +430,7 @@ class _AddDeviceCatalogScreenState extends ConsumerState<AddDeviceCatalogScreen>
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Pairing mode: Press and hold Button 1 for 3 seconds.',
+                      'Pairing mode: Press and hold Button 1 for 3 seconds (Status LED will blink rapidly).',
                       style: TextStyle(
                         fontSize: 11,
                         color: AppColors.amber,

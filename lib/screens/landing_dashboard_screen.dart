@@ -290,14 +290,7 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
               // 1. Dispatch factory reset opcode to firmware FIRST while link and security bond are alive
               try {
                 await commandPipeline.factoryResetAll();
-              } catch (_) {
-                try {
-                  await commandPipeline.sendRawControlPoint(
-                    Uint8List.fromList([0x1F]),
-                    withoutResponse: true,
-                  );
-                } catch (_) {}
-              }
+              } catch (_) {}
 
               await Future<void>.delayed(const Duration(milliseconds: 350));
 
@@ -352,8 +345,7 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
               final fleetStorage = ref.read(fleetStorageProvider);
               final robotsNotifier = ref.read(registeredRobotsProvider.notifier);
 
-              if (manager.connectedRobot?.id == robot.id ||
-                  manager.currentState != BleConnectionState.disconnected) {
+              if (manager.connectedRobot?.id == robot.id) {
                 await manager.disconnect();
               }
               try {
@@ -725,9 +717,7 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
     final connState = connStateAsync.value ?? manager.currentState;
     final isConnected = (connState == BleConnectionState.ready ||
             connState == BleConnectionState.connected) &&
-        (manager.connectedRobot?.id == robot.id ||
-            (manager.connectedRobot == null &&
-                (ref.read(registeredRobotsProvider).value?.length ?? 0) == 1));
+        manager.connectedRobot?.id == robot.id;
     final isInRange = liveMatch != null || isConnected;
     final rssi = liveMatch?.smoothedRssi;
 

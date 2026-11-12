@@ -50,6 +50,7 @@ void main() {
       expect(find.text('FABRICA PAIRING INSTRUCTIONS'), findsOneWidget);
       expect(find.textContaining('Power on your Fabrica robot'), findsOneWidget);
       expect(find.textContaining('Press and hold Button 1 for 3 seconds to enter pairing mode'), findsOneWidget);
+      expect(find.textContaining('status LED will blink rapidly to confirm pairing mode is active'), findsOneWidget);
       expect(find.text('DISCOVERED CANDIDATES'), findsOneWidget);
       expect(find.textContaining('Searching for Fabrica-DevKit-v1'), findsOneWidget);
 

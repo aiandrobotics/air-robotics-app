@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -168,14 +167,7 @@ class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
               // 2. Dispatch factory reset opcode to firmware FIRST while link and security bond are alive!
               try {
                 await commandPipeline.factoryResetAll();
-              } catch (_) {
-                try {
-                  await commandPipeline.sendRawControlPoint(
-                    Uint8List.fromList([0x1F]),
-                    withoutResponse: true,
-                  );
-                } catch (_) {}
-              }
+              } catch (_) {}
 
               // Give radio packet time to clear RF buffer before tearing down OS bond
               await Future<void>.delayed(const Duration(milliseconds: 350));
@@ -475,17 +467,13 @@ class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
 
   IconData _iconForName(String icon) {
     switch (icon.toLowerCase()) {
-      case 'gamepad':
-      case 'control':
+      case 'gamepad' || 'control':
         return Icons.gamepad;
-      case 'tune':
-      case 'sequencer':
+      case 'tune' || 'sequencer':
         return Icons.tune;
-      case 'build':
-      case 'calibrate':
+      case 'build' || 'calibrate':
         return Icons.build;
-      case 'terminal':
-      case 'diagnostics':
+      case 'terminal' || 'diagnostics':
         return Icons.terminal;
       default:
         return Icons.dashboard;

@@ -300,6 +300,11 @@ class _PairRobotScreenState extends ConsumerState<PairRobotScreen>
               '2',
               'Press and hold Button 1 for 3 seconds to enter pairing mode.',
             ),
+            const SizedBox(height: 8),
+            _buildInstructionStep(
+              '3',
+              'The status LED will blink rapidly to confirm pairing mode is active.',
+            ),
           ] else ...[
             _buildInstructionStep(
               '1',

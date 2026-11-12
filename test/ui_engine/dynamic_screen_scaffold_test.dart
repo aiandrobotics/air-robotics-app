@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:air_robotics_app/core/ble/ble_providers.dart';
-import 'package:air_robotics_app/core/ble/ble_transport_interface.dart';
 import 'package:air_robotics_app/core/ble/developer_debug_screen.dart';
 import 'package:air_robotics_app/core/fleet/fleet_providers.dart';
 import 'package:air_robotics_app/core/fleet/fleet_storage_service.dart';
@@ -194,12 +193,14 @@ void main() {
 
       container.read(activeProfileProvider.notifier).selectProfile(profile);
       container.read(isViewingDeviceProvider.notifier).openDevice();
+      await mockFleetStorage.saveRobot(RegisteredRobot(id: 'fab-robot-1', name: 'Fabrica-01', modelNumber: 'Fabrica-DevKit-v1', pairedAt: DateTime.now()));
+      await mockFleetStorage.setLastConnectedRobotId('fab-robot-1');
 
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: const MaterialApp(
-            home: DynamicScreenScaffold(),
+          child: MaterialApp(
+            home: DynamicScreenScaffold(key: UniqueKey()),
           ),
         ),
       );
@@ -263,12 +264,14 @@ void main() {
 
       container.read(activeProfileProvider.notifier).selectProfile(profile);
       container.read(isViewingDeviceProvider.notifier).openDevice();
+      await mockFleetStorage.saveRobot(RegisteredRobot(id: 'fab-robot-1', name: 'Fabrica-01', modelNumber: 'Fabrica-DevKit-v1', pairedAt: DateTime.now()));
+      await mockFleetStorage.setLastConnectedRobotId('fab-robot-1');
 
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: const MaterialApp(
-            home: DynamicScreenScaffold(),
+          child: MaterialApp(
+            home: DynamicScreenScaffold(key: UniqueKey()),
           ),
         ),
       );
@@ -350,15 +353,6 @@ void main() {
         ],
       );
 
-      final robot = DiscoveredRobot(
-        id: 'diag-bot-1',
-        name: 'DiagBot-01',
-        rawRssi: -50,
-        smoothedRssi: -50.0,
-        isPairingMode: false,
-        lastSeen: DateTime.now(),
-      );
-
       final inMemoryStorage = InMemoryProfileStorageService();
       final inMemoryResolver = ProfileResolver(storageService: inMemoryStorage);
       final container = ProviderContainer(
@@ -372,10 +366,13 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      // Connect so bleManager.connectedRobot != null (covers lines 190, 192)
-      await container.read(bleConnectionManagerProvider).connect(robot);
-      await mockFleetStorage.saveRobot(RegisteredRobot(id: 'diag-bot-1', name: 'DiagBot-01', pairedAt: DateTime.now()));
-      await mockFleetStorage.setLastConnectedRobotId('diag-bot-1');
+      // Save robot with null lastConnectedRobotId and disconnected bleManager so robotId is null (covers lines 190-198)
+      await mockFleetStorage.saveRobot(RegisteredRobot(
+        id: 'diag-bot-1',
+        name: 'DiagBot-01',
+        modelNumber: 'Fabrica-DevKit-v1',
+        pairedAt: DateTime.now(),
+      ));
 
       container.read(activeProfileProvider.notifier).selectProfile(customProfile);
       container.read(isViewingDeviceProvider.notifier).openDevice();
@@ -384,17 +381,24 @@ void main() {
         UncontrolledProviderScope(
           container: container,
           child: MaterialApp(
-            home: Navigator(
-              onGenerateRoute: (settings) => MaterialPageRoute(
-                builder: (context) => const DynamicScreenScaffold(),
+            home: Builder(
+              builder: (ctx) => Scaffold(
+                body: ElevatedButton(
+                  onPressed: () => Navigator.of(ctx).push(
+                    MaterialPageRoute<void>(builder: (_) => const DynamicScreenScaffold()),
+                  ),
+                  child: const Text('OPEN SCAFFOLD'),
+                ),
               ),
             ),
           ),
         ),
       );
       await tester.pumpAndSettle();
+      await tester.tap(find.text('OPEN SCAFFOLD'));
+      await tester.pumpAndSettle();
 
-      // 1. Verify diagnostics icon tab rendered (line 492)
+      // 1. Verify diagnostics icon tab rendered (line 488)
       expect(find.text('Diagnostics'), findsOneWidget);
       await tester.tap(find.text('Diagnostics').last);
       await tester.pumpAndSettle();
@@ -408,19 +412,23 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.textContaining('Failed to restore factory presets:'), findsOneWidget);
 
-      // 3. Factory Reset with failNextWrite so fallback 0x1F runs (lines 177-178, 190, 192)
+      // 3. Factory Reset with robotId == null fallback (lines 190-198)
       final moreOptions = find.byTooltip('More Hardware Options');
       await tester.tap(moreOptions);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Full Factory Reset'));
       await tester.pumpAndSettle();
 
-      mockTransport.failNextWrite = true;
       await tester.tap(find.text('RESET EVERYTHING'));
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pumpAndSettle();
 
-      // 4. PopScope onPopInvokedWithResult (lines 283-288)
+      // 4. Back button pop (line 294) and PopScope (line 282)
+      await tester.tap(find.byTooltip('Back to Home'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('OPEN SCAFFOLD'));
+      await tester.pumpAndSettle();
       final navigatorState = tester.state<NavigatorState>(find.byType(Navigator).last);
       navigatorState.maybePop();
       await tester.pumpAndSettle();

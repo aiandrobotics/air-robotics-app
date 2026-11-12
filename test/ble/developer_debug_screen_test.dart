@@ -32,6 +32,7 @@ void main() {
         ProviderScope(
           overrides: [
             bleTransportProvider.overrideWithValue(mockTransport),
+            commandPipelineProvider.overrideWithValue(CommandPipeline(transport: mockTransport, telemetryBus: null)),
           ],
           child: MaterialApp(
             theme: AppTheme.darkTheme,
@@ -100,6 +101,7 @@ void main() {
         ProviderScope(
           overrides: [
             bleTransportProvider.overrideWithValue(mockTransport),
+            commandPipelineProvider.overrideWithValue(CommandPipeline(transport: mockTransport, telemetryBus: null)),
           ],
           child: MaterialApp(
             theme: AppTheme.darkTheme,
@@ -129,6 +131,7 @@ void main() {
         overrides: [
           bleTransportProvider.overrideWithValue(mockTransport),
           profileStorageProvider.overrideWithValue(InMemoryProfileStorageService()),
+          commandPipelineProvider.overrideWithValue(CommandPipeline(transport: mockTransport, telemetryBus: null)),
         ],
       );
       addTearDown(container.dispose);
@@ -200,6 +203,7 @@ void main() {
         overrides: [
           bleTransportProvider.overrideWithValue(mockTransport),
           profileStorageProvider.overrideWithValue(InMemoryProfileStorageService()),
+          commandPipelineProvider.overrideWithValue(CommandPipeline(transport: mockTransport, telemetryBus: null)),
         ],
       );
       addTearDown(container.dispose);
