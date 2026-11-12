@@ -99,9 +99,18 @@ class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
   }
 
   void _confirmFactoryResetAll(BuildContext context) {
+    final bleManager = ref.read(bleConnectionManagerProvider);
+    final commandPipeline = ref.read(commandPipelineProvider);
+    final robotsNotifier = ref.read(registeredRobotsProvider.notifier);
+    final fleetStorage = ref.read(fleetStorageProvider);
+    final bleTransport = ref.read(bleTransportProvider);
+    final viewingNotifier = ref.read(isViewingDeviceProvider.notifier);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final activeProfile = ref.read(activeProfileProvider);
+
     showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         backgroundColor: AppColors.surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppTokens.radiusLg),
@@ -129,7 +138,7 @@ class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
           '• Homes all 16 flap servos to 0°.\n'
           '• Erases all bonded phone encryption keys from flash.\n'
           '• Terminates Bluetooth link and restarts indefinite pairing mode.\n\n'
-          'You will need to re-pair your phone from scratch.',
+          'The robot will be removed from Your Devices on this phone.',
           style: TextStyle(
             color: AppColors.textSecondary,
             fontSize: 13,
@@ -138,7 +147,7 @@ class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text('CANCEL', style: TextStyle(color: AppColors.textSecondary)),
           ),
           ElevatedButton(
@@ -147,26 +156,47 @@ class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
               foregroundColor: Colors.white,
             ),
             onPressed: () async {
-              Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
+              Navigator.of(dialogContext).pop();
+              scaffoldMessenger.showSnackBar(
                 const SnackBar(
                   content: Text('Executing Full Factory Reset (0x1F)...'),
                   backgroundColor: AppColors.crimson,
                 ),
               );
-              final robotId =
-                  ref.read(bleConnectionManagerProvider).connectedRobot?.id;
-              try {
-                await ref.read(commandPipelineProvider).factoryResetAll();
-              } catch (_) {}
+
+              // 1. Determine robot ID before link disconnects
+              String? robotId = bleManager.connectedRobot?.id;
+              robotId ??= await fleetStorage.getLastConnectedRobotId();
+
+              // 2. Remove robot from mobile fleet storage immediately
               if (robotId != null) {
                 try {
-                  await ref.read(bleTransportProvider).removeBond(robotId);
+                  await bleTransport.removeBond(robotId);
                 } catch (_) {}
-                ref.read(registeredRobotsProvider.notifier).removeRobot(robotId);
+                await robotsNotifier.removeRobot(robotId);
+              } else {
+                final allRegistered = await fleetStorage.getRegisteredRobots();
+                for (final r in allRegistered) {
+                  if (r.modelNumber == activeProfile.modelNumber || allRegistered.length == 1) {
+                    try {
+                      await bleTransport.removeBond(r.id);
+                    } catch (_) {}
+                    await robotsNotifier.removeRobot(r.id);
+                  }
+                }
               }
-              await ref.read(bleConnectionManagerProvider).disconnect();
-              ref.read(isViewingDeviceProvider.notifier).closeDevice();
+              await fleetStorage.setLastConnectedRobotId(null);
+
+              // 3. Dispatch opcode 0x1F to firmware
+              try {
+                await commandPipeline.factoryResetAll();
+              } catch (_) {}
+
+              // 4. Disconnect BLE manager and return to home screen
+              try {
+                await bleManager.disconnect();
+              } catch (_) {}
+              viewingNotifier.closeDevice();
             },
             child: const Text('RESET EVERYTHING (0x1F)'),
           ),
@@ -176,9 +206,12 @@ class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
   }
 
   void _confirmDisconnect(BuildContext context) {
+    final bleManager = ref.read(bleConnectionManagerProvider);
+    final viewingNotifier = ref.read(isViewingDeviceProvider.notifier);
+
     showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         backgroundColor: AppColors.surface,
         title: const Text('Disconnect Robot?'),
         content: const Text(
@@ -187,7 +220,7 @@ class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text('CANCEL', style: TextStyle(color: AppColors.textSecondary)),
           ),
           ElevatedButton(
@@ -196,9 +229,9 @@ class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
               foregroundColor: Colors.white,
             ),
             onPressed: () async {
-              Navigator.of(context).pop();
-              await ref.read(bleConnectionManagerProvider).disconnect();
-              ref.read(isViewingDeviceProvider.notifier).closeDevice();
+              Navigator.of(dialogContext).pop();
+              await bleManager.disconnect();
+              viewingNotifier.closeDevice();
             },
             child: const Text('DISCONNECT'),
           ),

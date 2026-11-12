@@ -241,14 +241,22 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
             ),
             onPressed: () async {
               final manager = ref.read(bleConnectionManagerProvider);
+              final transport = ref.read(bleTransportProvider);
+              final fleetStorage = ref.read(fleetStorageProvider);
+              final robotsNotifier = ref.read(registeredRobotsProvider.notifier);
+
               if (manager.connectedRobot?.id == robot.id ||
                   manager.currentState != BleConnectionState.disconnected) {
                 await manager.disconnect();
               }
               try {
-                await ref.read(bleTransportProvider).removeBond(robot.id);
+                await transport.removeBond(robot.id);
               } catch (_) {}
-              ref.read(registeredRobotsProvider.notifier).removeRobot(robot.id);
+              final lastId = await fleetStorage.getLastConnectedRobotId();
+              if (lastId == robot.id) {
+                await fleetStorage.setLastConnectedRobotId(null);
+              }
+              await robotsNotifier.removeRobot(robot.id);
               if (context.mounted) {
                 Navigator.of(context).pop();
               }
