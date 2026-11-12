@@ -270,6 +270,22 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
         _radarController.stop();
         _radarController.reset();
       }
+
+      // Continuous auto-discovery loop: if scan times out while looking for robots,
+      // seamlessly restart the scan cycle after a brief radio rest (500ms).
+      if (!isScanning && mounted && (ModalRoute.of(context)?.isCurrent ?? false)) {
+        final connState = ref.read(bleConnectionManagerProvider).currentState;
+        final isConnected = connState == BleConnectionState.ready ||
+            connState == BleConnectionState.connected ||
+            connState == BleConnectionState.connecting ||
+            connState == BleConnectionState.discovering;
+        if (!isConnected) {
+          Future.delayed(const Duration(milliseconds: 500), () {
+            if (!mounted) return;
+            _startContinuousAutoScan();
+          });
+        }
+      }
     });
 
     // Opportunistically auto-connect to registered fleet robot when detected in scan

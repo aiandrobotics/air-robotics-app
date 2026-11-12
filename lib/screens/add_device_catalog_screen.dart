@@ -19,17 +19,10 @@ class AddDeviceCatalogScreen extends ConsumerStatefulWidget {
       _AddDeviceCatalogScreenState();
 }
 
-class _AddDeviceCatalogScreenState extends ConsumerState<AddDeviceCatalogScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _radarController;
-
+class _AddDeviceCatalogScreenState extends ConsumerState<AddDeviceCatalogScreen> {
   @override
   void initState() {
     super.initState();
-    _radarController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    );
 
     // Auto-start continuous scan on screen entry if not already scanning
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -38,12 +31,6 @@ class _AddDeviceCatalogScreenState extends ConsumerState<AddDeviceCatalogScreen>
         ref.read(bleScannerProvider).startScan(timeout: const Duration(seconds: 45));
       }
     });
-  }
-
-  @override
-  void dispose() {
-    _radarController.dispose();
-    super.dispose();
   }
 
   void _navigateToPairScreen(DiscoveredRobot robot) {
@@ -65,21 +52,15 @@ class _AddDeviceCatalogScreenState extends ConsumerState<AddDeviceCatalogScreen>
   Widget build(BuildContext context) {
     ref.listen<AsyncValue<bool>>(isScanningProvider, (prev, next) {
       final isScanning = next.value ?? false;
-      if (isScanning && !_radarController.isAnimating) {
-        _radarController.repeat();
-      } else if (!isScanning && _radarController.isAnimating) {
-        _radarController.stop();
-        _radarController.reset();
-      }
 
       // Keep discovery running continuously in the background on this screen
       if (!isScanning && mounted && (ModalRoute.of(context)?.isCurrent ?? false)) {
-        ref.read(bleScannerProvider).startScan(timeout: const Duration(seconds: 45));
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (!mounted) return;
+          ref.read(bleScannerProvider).startScan(timeout: const Duration(seconds: 45));
+        });
       }
     });
-
-    final isScanningAsync = ref.watch(isScanningProvider);
-    final isScanning = isScanningAsync.value ?? false;
 
     final registeredAsync = ref.watch(registeredRobotsProvider);
     final registeredList = registeredAsync.value ?? [];
@@ -103,20 +84,6 @@ class _AddDeviceCatalogScreenState extends ConsumerState<AddDeviceCatalogScreen>
             letterSpacing: 1.2,
           ),
         ),
-        actions: [
-          IconButton(
-            icon: isScanning
-                ? RotationTransition(
-                    turns: _radarController,
-                    child: const Icon(Icons.refresh, size: 20, color: AppColors.cyan),
-                  )
-                : const Icon(Icons.refresh, size: 20),
-            tooltip: isScanning ? 'Scanning...' : 'Restart Scan',
-            onPressed: () {
-              ref.read(bleScannerProvider).startScan(timeout: const Duration(seconds: 45));
-            },
-          ),
-        ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
