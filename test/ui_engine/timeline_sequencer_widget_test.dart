@@ -66,6 +66,7 @@ void main() {
       expect(find.text('ADD MOTION STEP (3/16)'), findsOneWidget);
       expect(find.text('PREVIEW ON ROBOT'), findsOneWidget);
       expect(find.text('SAVE TO BUTTON'), findsOneWidget);
+      expect(find.text('SYNC FROM ROBOT (0x0B)'), findsOneWidget);
       expect(find.text('RESTORE FACTORY PRESETS'), findsOneWidget);
     });
 
@@ -230,6 +231,23 @@ void main() {
       expect(restorePacket.length, 1);
       expect(find.textContaining('Factory presets restored successfully'),
           findsOneWidget);
+    });
+
+    testWidgets('sync from robot dispatches 0x0B opcode to request FAB3 push',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(600, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(createTestWidget());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('SYNC FROM ROBOT (0x0B)'));
+      await tester.pumpAndSettle();
+
+      final payloads = mockTransport.writtenControlPointPayloads;
+      expect(payloads.isNotEmpty, isTrue);
+      expect(payloads.first, equals([0x0B]));
+      expect(find.textContaining('Sync requested'), findsOneWidget);
     });
   });
 }

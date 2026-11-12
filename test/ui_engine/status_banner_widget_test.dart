@@ -86,6 +86,13 @@ void main() {
       expect(find.text('LED: RUNNING'), findsOneWidget);
       expect(find.text('-58 dBm'), findsOneWidget);
       expect(find.text('Heap: 198 KB'), findsOneWidget);
+      expect(find.text('IDENTIFY'), findsOneWidget);
+
+      await tester.tap(find.text('IDENTIFY'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(mockTransport.writtenControlPointPayloads.last, equals([0x0E]));
     });
 
     testWidgets('renders fault alert chips when error bitmask is non-zero',

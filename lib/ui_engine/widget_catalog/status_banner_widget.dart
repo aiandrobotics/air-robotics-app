@@ -142,6 +142,53 @@ class StatusBannerWidget extends ConsumerWidget {
                           ],
                         ),
                       ),
+                      const SizedBox(width: AppTokens.space8),
+                      InkWell(
+                        onTap: () async {
+                          try {
+                            await ref.read(commandPipelineProvider).identifyRobot();
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Flashing robot LED for 3s (Opcode 0x0E)...'),
+                                  duration: Duration(seconds: 2),
+                                  backgroundColor: AppColors.purple,
+                                ),
+                              );
+                            }
+                          } catch (_) {}
+                        },
+                        borderRadius: BorderRadius.circular(6),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.purple.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: AppColors.purple.withValues(alpha: 0.5),
+                            ),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.flare, size: 12, color: AppColors.purple),
+                              SizedBox(width: 4),
+                              Text(
+                                'IDENTIFY',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.purple,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 if (packet != null)

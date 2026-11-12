@@ -104,22 +104,21 @@ void main() {
 
     test('all helper methods serialize correct opcodes and arguments', () async {
       // 1. Stop sequence (0x02)
-      final fStop = pipeline.stopSequence();
+      final fStop = pipeline.stopSequence(withoutResponse: false);
       telemetryBus.ingestBytes(makeAckPacket().toBytes());
       await fStop;
       expect(mockTransport.writtenControlPointPayloads.last, equals([0x02]));
 
       // 2. Identify robot (0x0E)
-      final fIdentify = pipeline.identifyRobot();
+      final fIdentify = pipeline.identifyRobot(withoutResponse: false);
       telemetryBus.ingestBytes(makeAckPacket().toBytes());
       await fIdentify;
       expect(mockTransport.writtenControlPointPayloads.last, equals([0x0E]));
 
-      // 3. Jog motor (0x0D channel 3 angle 90)
-      final fJog = pipeline.jogMotor(channel: 3, angleDeg: 90);
-      telemetryBus.ingestBytes(makeAckPacket().toBytes());
-      await fJog;
+      // 3. Jog motor (0x0D channel 3 angle 90, without response fast path)
+      await pipeline.jogMotor(channel: 3, angleDeg: 90);
       expect(mockTransport.writtenControlPointPayloads.last, equals([0x0D, 0x03, 0x5A]));
+      expect(mockTransport.writtenControlPointNoResponse.last, isTrue);
 
       // 4. Set telemetry stream (0x11 enable=true)
       final fTelem = pipeline.setTelemetryStream(true);
@@ -132,6 +131,22 @@ void main() {
       telemetryBus.ingestBytes(makeAckPacket().toBytes());
       await fRestore;
       expect(mockTransport.writtenControlPointPayloads.last, equals([0x0C]));
+
+      // 6. Get button config (0x0B)
+      final fConfig = pipeline.getButtonConfig();
+      telemetryBus.ingestBytes(makeAckPacket().toBytes());
+      await fConfig;
+      expect(mockTransport.writtenControlPointPayloads.last, equals([0x0B]));
+
+      // 7. Get telemetry snapshot (0x10)
+      final fSnapshot = pipeline.getTelemetry();
+      telemetryBus.ingestBytes(makeAckPacket().toBytes());
+      await fSnapshot;
+      expect(mockTransport.writtenControlPointPayloads.last, equals([0x10]));
+
+      // 8. Factory reset all (0x1F)
+      await pipeline.factoryResetAll();
+      expect(mockTransport.writtenControlPointPayloads.last, equals([0x1F]));
     });
   });
 }

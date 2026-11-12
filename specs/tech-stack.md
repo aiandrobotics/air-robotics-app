@@ -98,9 +98,28 @@ Upon initial connection, AIR Robotics queries the standard DIS to resolve on-dev
 
 | Characteristic | Short UUID | 128-Bit UUID | Properties | Purpose |
 | :--- | :--- | :--- | :--- | :--- |
-| **Control Point** | `FAB1` | `0000FAB1-0000-1000-8000-00805F9B34FB` | `Write`, `Write Without Response` | Command ingress for routine triggers, raw preview, calibration jog, and E-Stop |
+| **Control Point** | `FAB1` | `0000FAB1-0000-1000-8000-00805F9B34FB` | `Write`, `Write Without Response` | Command ingress for routine triggers, raw preview, calibration jog, E-Stop, and factory resets (`0x00`–`0x1F`) |
 | **Telemetry Stream**| `FAB2` | `0000FAB2-0000-1000-8000-00805F9B34FB` | `Read`, `Notify` | Real-time packed 31-byte binary packet (10 Hz in motion, 1 Hz idle) |
 | **Configuration** | `FAB3` | `0000FAB3-0000-1000-8000-00805F9B34FB` | `Read`, `Write`, `Notify` | 212-byte table of all 4 physical button folding routines with auto-CRC32 |
+
+### 3.3 Command Opcode Wire Reference (`FAB1`)
+
+All commands targeting `FAB1` are serialized as Little-Endian byte arrays:
+
+| Opcode | Command Name | Payload Structure | Write Mode | Firmware Behavior |
+|---|---|---|---|---|
+| `0x00` | `CMD_RUN_PRESET` | `[0x00, preset_id (1-4)]` (2B) | With/Without Rsp | Executes saved preset from flash; streams 10 Hz telemetry; rejected if busy. |
+| `0x01` | `CMD_RUN_RAW_SEQUENCE` | `[0x01, step_count, (motor_count, m0, m1)...]` or `[0x01][53B struct]` | With/Without Rsp | Executes routine from RAM without modifying flash (`active_button_id = 0`). |
+| `0x02` | `CMD_STOP_SEQUENCE` | `[0x02]` (1B) | Without/With Rsp | Halts motion, homes flaps to $0^\circ$. **Unlatches** `STATE_ESTOP`, resets error bit 2, returns to `STATE_IDLE_RUN`. Exits calibration mode. |
+| `0x03` | `CMD_EMERGENCY_STOP` | `[0x03]` (1B) | **Without Response** ($<50\text{ms}$) | Halts motion immediately, homes all 16 servos to $0^\circ$, flashes LED, latches `STATE_ESTOP` (bit 2). |
+| `0x0A` | `CMD_SET_BUTTON_SEQUENCE` | `[0x0A, preset_id, step_count, steps...]` | With/Without Rsp | Calculates CRC32, commits routine to flash slot (1-4), pulses LED 2s, pushes 212B on `FAB3`. |
+| `0x0B` | `CMD_GET_BUTTON_CONFIG` | `[0x0B]` (1B) | With/Without Rsp | Triggers an immediate 212-byte GATT notification push over `FAB3` with all 4 button routines. |
+| `0x0C` | `CMD_RESTORE_FACTORY_PRESETS`| `[0x0C]` (1B) | With/Without Rsp | Restores hardcoded default presets 1–4, homes servos to $0^\circ$, emits 212B notification on `FAB3`. Leaves BLE bonds intact. |
+| `0x0D` | `CMD_JOG_MOTOR_ANGLE` | `[0x0D, channel (0-15), angle (0-180)]` (3B) | **Without Response** | Sets live servo angle for manual positioning. Protected by 10s thermal PWM cutoff and 15s inactivity auto-home. |
+| `0x0E` | `CMD_IDENTIFY_ROBOT` | `[0x0E]` (1B) | Without/With Rsp | Triggers a 3-second rapid visual LED pulse train (`LED_STATE_IDENTIFY`) for physical locator identification. |
+| `0x10` | `CMD_GET_TELEMETRY` | `[0x10]` (1B) | With/Without Rsp | Requests a single-shot 31-byte telemetry notification on `FAB2`. |
+| `0x11` | `CMD_SET_TELEMETRY_STREAM` | `[0x11, enable (0 or 1)]` (2B) | With/Without Rsp | Pauses (`0x00`) or resumes (`0x01`) continuous background telemetry streaming on `FAB2`. |
+| `0x1F` | `CMD_FACTORY_RESET_ALL` | `[0x1F]` (1B) | With Response | **Full System Reset**: wipes custom routines, homes all servos, **erases all bonded phone keys (LTKs/IRKs) from NVS flash**, terminates BLE connection, and restarts pairing mode. |
 
 ### 3.3 Packed 31-Byte Telemetry Wire Layout (`FAB2`)
 

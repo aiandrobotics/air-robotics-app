@@ -16,12 +16,12 @@ When implementing Fabrica features, screens, protocol models, and hardware integ
 | Subsystem / Feature | Firmware Source (`firmware/main/`) | Mobile App Component |
 | :--- | :--- | :--- |
 | **BLE Transport & GATT Topology** | `ble_transport.c`, `ble_transport.h` | `lib/core/ble/` — GATT UUIDs (`FAB0`, `FAB1`, `FAB2`, `FAB3`), DIS (`0x180A`), 120s pairing window, SMP bonding, RPA privacy resolution, 517B MTU exchange |
-| **Command Opcodes & Payloads** | `command.h`, `remote_cmd.c`, `remote_cmd.h` | `lib/core/protocol/command_builder.dart` & `command_pipeline.dart` — Opcodes (`0x00`–`0x11`), argument serialization, command status acknowledgment codes |
+| **Command Opcodes & Payloads** | `command.h`, `remote_cmd.c`, `remote_cmd.h` | `lib/core/protocol/command_builder.dart` & `command_pipeline.dart` — Opcodes (`0x00` Run Preset, `0x01` Raw Preview, `0x02` Stop/Unlatch, `0x03` Fast-path E-Stop, `0x0A` Save Button, `0x0B` Sync Table, `0x0C` Restore Presets, `0x0D` Jog Motor, `0x0E` Identify LED, `0x10` Get Telemetry Snapshot, `0x11` Set Telemetry Stream, `0x1F` Full Factory Reset), argument serialization, command status acknowledgment codes |
 | **31-Byte Binary Telemetry** | `telemetry.c`, `telemetry.h` | `lib/core/protocol/telemetry_packet.dart` & `telemetry_bus.dart` — Zero-allocation 31-byte Little-Endian wire unpacker, 10 Hz motion / 1 Hz idle stream handling |
 | **System State Machine** | `state_machine.c`, `state_machine.h` | `lib/core/protocol/` & UI widgets — Machine states (`IDLE`, `RUNNING_MOTION`, `ESTOP`, `ERROR`, `CALIBRATING`) |
-| **LED Status Indicator** | `led.c`, `led.h` | `lib/ui_engine/widget_catalog/status_banner_widget.dart` — Mirror firmware LED patterns (idle, pairing fast double-blink, estop, running, save success) |
-| **Servo Kinematics & Flap Motion** | `motion.c`, `motion.h`, `pca9685.c` | `lib/visualizers/fabrica/` — Flap channel mapping (Ch 0: Left, Ch 1: Right, Ch 2: Bottom, Ch 3: Top), fold angles ($0^\circ-180^\circ$), timing sweeps |
-| **NVS Presets & CRC32 Storage** | `storage.c`, `storage.h` | `lib/core/protocol/crc32.dart` & `timeline_sequencer_widget.dart` — 212-byte `FAB3` sequence table, IEEE 802.3 CRC32 verification |
+| **LED Status Indicator** | `led.c`, `led.h` | `lib/ui_engine/widget_catalog/status_banner_widget.dart` — Mirror firmware LED patterns (idle, pairing fast double-blink, estop, running, save success, identify pulse train) |
+| **Servo Kinematics & Flap Motion** | `motion.c`, `motion.h`, `pca9685.c` | `lib/visualizers/fabrica/` & `jog_slider_bank_widget.dart` — Flap channel mapping (Ch 0: Left, Ch 1: Right, Ch 2: Bottom, Ch 3: Top), fold angles ($0^\circ-180^\circ$), timing sweeps, 10s thermal cutoff, 15s auto-home |
+| **NVS Presets & CRC32 Storage** | `storage.c`, `storage.h` | `lib/core/protocol/crc32.dart`, `routine_models.dart`, & `timeline_sequencer_widget.dart` — 212-byte `FAB3` sequence table, IEEE 802.3 CRC32 verification |
 | **Physical Button Hardware** | `buttons.c`, `buttons.h` | Preset mapping (Buttons 1–4) & physical 3-second button hold pairing gate logic |
 | **Global Parameters & Bounds** | `config.h` | Timing thresholds, angle bounds, safety limits, firmware version constants |
 

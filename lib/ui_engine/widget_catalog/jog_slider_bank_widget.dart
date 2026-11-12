@@ -82,18 +82,65 @@ class _JogSliderBankWidgetState extends ConsumerState<JogSliderBankWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (widget.config.title.isNotEmpty) ...[
-          Text(
-            widget.config.title.toUpperCase(),
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: AppColors.cyan,
-              letterSpacing: 0.8,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              widget.config.title.isNotEmpty
+                  ? widget.config.title.toUpperCase()
+                  : 'SERVO MANUAL JOG',
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: AppColors.cyan,
+                letterSpacing: 0.8,
+              ),
             ),
+            TextButton.icon(
+              style: TextButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                foregroundColor: AppColors.amber,
+              ),
+              icon: const Icon(Icons.home, size: 14),
+              label: const Text(
+                'HOME ALL (0x02)',
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+              ),
+              onPressed: () async {
+                try {
+                  await ref.read(commandPipelineProvider).stopSequence();
+                  setState(() {
+                    for (final a in actuators) {
+                      _localAngles[a.channel] = 0.0;
+                    }
+                  });
+                } catch (_) {}
+              },
+            ),
+          ],
+        ),
+        const SizedBox(height: AppTokens.space4),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceHighlight,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: AppColors.border),
           ),
-          const SizedBox(height: AppTokens.space8),
-        ],
+          child: const Row(
+            children: [
+              Icon(Icons.thermostat, size: 14, color: AppColors.cyan),
+              SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'Thermal safety: 10s PWM idle cutoff • 15s inactivity auto-home',
+                  style: TextStyle(fontSize: 10, color: AppColors.textMuted),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppTokens.space8),
         Card(
           child: Padding(
             padding: AppTokens.paddingCard,

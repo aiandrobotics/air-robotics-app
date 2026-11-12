@@ -73,7 +73,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final eStopButton = find.byType(ElevatedButton);
+      final eStopButton = find.widgetWithText(ElevatedButton, 'EMERGENCY STOP');
       expect(eStopButton, findsOneWidget);
       expect(find.text('EMERGENCY STOP'), findsOneWidget);
 
@@ -116,7 +116,12 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('E-STOP ACTIVE (HALTED)'), findsOneWidget);
+      expect(find.text('CLEAR & UNLATCH E-STOP'), findsOneWidget);
+
+      await tester.tap(find.text('CLEAR & UNLATCH E-STOP'));
+      await tester.pumpAndSettle();
+
+      expect(mockTransport.writtenControlPointPayloads.last, equals([0x02]));
     });
   });
 }

@@ -103,28 +103,43 @@ class CommandPipeline {
     await sendCommand(payload);
   }
 
-  /// Cleanly stops active motion or exits calibration mode.
-  Future<void> stopSequence() async {
+  /// Cleanly stops active motion, clears latched E-Stop, or exits calibration mode.
+  Future<void> stopSequence({bool withoutResponse = true}) async {
     final payload = CommandBuilder.buildStopSequence();
-    await sendCommand(payload);
+    if (withoutResponse) {
+      await transport.writeControlPoint(payload, withoutResponse: true);
+    } else {
+      await sendCommand(payload);
+    }
   }
 
   /// Triggers a 3-second rapid visual pulse train on the robot's LED.
-  Future<void> identifyRobot() async {
+  Future<void> identifyRobot({bool withoutResponse = true}) async {
     final payload = CommandBuilder.buildIdentifyRobot();
-    await sendCommand(payload);
+    if (withoutResponse) {
+      await transport.writeControlPoint(payload, withoutResponse: true);
+    } else {
+      await sendCommand(payload);
+    }
   }
 
   /// Jogs a single motor channel to a target angle (0° to 180°).
+  ///
+  /// Uses Write Without Response by default for <20ms real-time dragging latency.
   Future<void> jogMotor({
     required int channel,
     required int angleDeg,
+    bool withoutResponse = true,
   }) async {
     final payload = CommandBuilder.buildJogMotor(
       channel: channel,
       angleDeg: angleDeg,
     );
-    await sendCommand(payload);
+    if (withoutResponse) {
+      await transport.writeControlPoint(payload, withoutResponse: true);
+    } else {
+      await sendCommand(payload);
+    }
   }
 
   /// Enables or disables periodic BLE telemetry notifications on the robot.
@@ -133,10 +148,33 @@ class CommandPipeline {
     await sendCommand(payload);
   }
 
-  /// Restores all 4 garment folding presets to factory defaults.
+  /// Requests an immediate single-shot 31-byte telemetry snapshot on FAB2 (Opcode 0x10).
+  Future<void> getTelemetry() async {
+    final payload = CommandBuilder.buildGetTelemetry();
+    await sendCommand(payload);
+  }
+
+  /// Requests a full 212-byte button sequence configuration table push on FAB3 (Opcode 0x0B).
+  Future<void> getButtonConfig() async {
+    final payload = CommandBuilder.buildGetButtonConfig();
+    await sendCommand(payload);
+  }
+
+  /// Restores all 4 garment folding presets to factory defaults (Opcode 0x0C).
+  ///
+  /// Leaves BLE security bonds untouched.
   Future<void> restoreFactoryPresets() async {
     final payload = CommandBuilder.buildRestoreFactoryPresets();
     await sendCommand(payload);
+  }
+
+  /// Dispatches full factory reset (Opcode 0x1F).
+  ///
+  /// Wipes all folding routines in flash, homes servos, and purges all BLE bonds
+  /// from hardware flash before the robot disconnects and re-enters pairing mode.
+  Future<void> factoryResetAll() async {
+    final payload = CommandBuilder.buildFactoryResetAll();
+    await transport.writeControlPoint(payload, withoutResponse: false);
   }
 
   /// Dispatches an arbitrary raw byte payload to the FAB1 control point.

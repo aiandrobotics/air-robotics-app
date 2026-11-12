@@ -97,6 +97,75 @@ class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
     );
   }
 
+  void _confirmFactoryResetAll(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTokens.radiusLg),
+          side: const BorderSide(color: AppColors.crimson),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: AppColors.crimson, size: 26),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Full Hardware Factory Reset?',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.crimson,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: const Text(
+          'This will send opcode 0x1F to Fabrica:\n\n'
+          '• Wipes all custom routines in flash & restores factory defaults.\n'
+          '• Homes all 16 flap servos to 0°.\n'
+          '• Erases all bonded phone encryption keys from flash.\n'
+          '• Terminates Bluetooth link and restarts indefinite pairing mode.\n\n'
+          'You will need to re-pair your phone from scratch.',
+          style: TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 13,
+            height: 1.4,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('CANCEL', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.crimson,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Executing Full Factory Reset (0x1F)...'),
+                  backgroundColor: AppColors.crimson,
+                ),
+              );
+              try {
+                await ref.read(commandPipelineProvider).factoryResetAll();
+              } catch (_) {}
+              await ref.read(bleConnectionManagerProvider).disconnect();
+              ref.read(isViewingDeviceProvider.notifier).closeDevice();
+            },
+            child: const Text('RESET EVERYTHING (0x1F)'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _confirmDisconnect(BuildContext context) {
     showDialog<void>(
       context: context,
@@ -203,6 +272,24 @@ class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
           ),
           actions: [
             IconButton(
+              icon: const Icon(Icons.flare, size: 20, color: AppColors.purple),
+              tooltip: 'Identify Robot (Pulse LED 3s)',
+              onPressed: () async {
+                try {
+                  await ref.read(commandPipelineProvider).identifyRobot();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Flashing robot LED for 3s (Opcode 0x0E)...'),
+                        duration: Duration(seconds: 2),
+                        backgroundColor: AppColors.purple,
+                      ),
+                    );
+                  }
+                } catch (_) {}
+              },
+            ),
+            IconButton(
               icon: const Icon(Icons.delete_sweep, size: 22, color: AppColors.crimson),
               tooltip: 'Erase Presets in Firmware',
               onPressed: () => _confirmErasePresets(context),
@@ -222,6 +309,33 @@ class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
                   ),
                 );
               },
+            ),
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert, size: 20),
+              tooltip: 'More Hardware Options',
+              color: AppColors.surface,
+              onSelected: (value) {
+                switch (value) {
+                  case 'factory_reset':
+                    _confirmFactoryResetAll(context);
+                    break;
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'factory_reset',
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning_amber_rounded, size: 18, color: AppColors.crimson),
+                      SizedBox(width: 8),
+                      Text(
+                        'Full Factory Reset (0x1F)',
+                        style: TextStyle(color: AppColors.crimson),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ],
         ),

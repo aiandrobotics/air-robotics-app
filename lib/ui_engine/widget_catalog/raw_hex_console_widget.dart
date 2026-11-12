@@ -91,6 +91,7 @@ class _RawHexConsoleWidgetState extends ConsumerState<RawHexConsoleWidget> {
   Widget build(BuildContext context) {
     final metricsAsync = ref.watch(telemetryMetricsProvider);
     final telemetryAsync = ref.watch(latestTelemetryProvider);
+    final isStreamActive = ref.watch(isTelemetryStreamActiveProvider);
 
     final metrics =
         metricsAsync.value ?? ref.read(telemetryBusProvider).currentMetrics;
@@ -259,6 +260,129 @@ class _RawHexConsoleWidgetState extends ConsumerState<RawHexConsoleWidget> {
                         );
                       },
                     ),
+            ),
+
+            const SizedBox(height: AppTokens.space12),
+
+            // Quick Diagnostics Actions
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                ActionChip(
+                  avatar: const Icon(Icons.camera_alt_outlined, size: 14, color: AppColors.cyan),
+                  label: const Text('SNAPSHOT (0x10)', style: TextStyle(fontSize: 10)),
+                  onPressed: () async {
+                    _addLog('TX -> FAB1: [10] (CMD_GET_TELEMETRY)');
+                    try {
+                      await ref.read(commandPipelineProvider).getTelemetry();
+                    } catch (e) {
+                      _addLog('ERR: Snapshot failed: $e');
+                    }
+                  },
+                ),
+                ActionChip(
+                  avatar: Icon(
+                    isStreamActive ? Icons.pause : Icons.play_arrow,
+                    size: 14,
+                    color: isStreamActive ? AppColors.amber : AppColors.emerald,
+                  ),
+                  label: Text(
+                    isStreamActive ? 'PAUSE STREAM (0x11)' : 'RESUME STREAM (0x11)',
+                    style: const TextStyle(fontSize: 10),
+                  ),
+                  onPressed: () async {
+                    final nextState = !isStreamActive;
+                    _addLog('TX -> FAB1: [11 ${nextState ? '01' : '00'}] (CMD_SET_TELEMETRY_STREAM)');
+                    try {
+                      await ref.read(commandPipelineProvider).setTelemetryStream(nextState);
+                      ref.read(isTelemetryStreamActiveProvider.notifier).setStreamActive(nextState);
+                    } catch (e) {
+                      _addLog('ERR: Stream toggle failed: $e');
+                    }
+                  },
+                ),
+                ActionChip(
+                  avatar: const Icon(Icons.flare, size: 14, color: AppColors.purple),
+                  label: const Text('IDENTIFY (0x0E)', style: TextStyle(fontSize: 10)),
+                  onPressed: () async {
+                    _addLog('TX -> FAB1: [0E] (CMD_IDENTIFY_ROBOT)');
+                    try {
+                      await ref.read(commandPipelineProvider).identifyRobot();
+                    } catch (e) {
+                      _addLog('ERR: Identify failed: $e');
+                    }
+                  },
+                ),
+                ActionChip(
+                  avatar: const Icon(Icons.sync, size: 14, color: AppColors.cyan),
+                  label: const Text('GET CONFIG (0x0B)', style: TextStyle(fontSize: 10)),
+                  onPressed: () async {
+                    _addLog('TX -> FAB1: [0B] (CMD_GET_BUTTON_CONFIG)');
+                    try {
+                      await ref.read(commandPipelineProvider).getButtonConfig();
+                    } catch (e) {
+                      _addLog('ERR: Get config failed: $e');
+                    }
+                  },
+                ),
+              ],
+            ),
+
+            const SizedBox(height: AppTokens.space12),
+
+            // Device Information Service (DIS 0x180A) Static Metadata
+            Container(
+              padding: const EdgeInsets.all(AppTokens.space12),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceHighlight,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.info_outline, size: 14, color: AppColors.cyan),
+                      SizedBox(width: 6),
+                      Text(
+                        'DEVICE INFORMATION SERVICE (DIS 0x180A)',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.cyan,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 6),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Model Number (0x2A24):', style: TextStyle(fontSize: 10, color: AppColors.textMuted)),
+                      Text('Fabrica-DevKit-v1', style: TextStyle(fontSize: 10, fontFamily: 'monospace', fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  SizedBox(height: 2),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Firmware Revision (0x2A26):', style: TextStyle(fontSize: 10, color: AppColors.textMuted)),
+                      Text('v1.13.0', style: TextStyle(fontSize: 10, fontFamily: 'monospace', fontWeight: FontWeight.bold, color: AppColors.emerald)),
+                    ],
+                  ),
+                  SizedBox(height: 2),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Manufacturer Name (0x2A29):', style: TextStyle(fontSize: 10, color: AppColors.textMuted)),
+                      Text('AIR Robotics', style: TextStyle(fontSize: 10, fontFamily: 'monospace', fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ],
+              ),
             ),
 
             const SizedBox(height: AppTokens.space12),

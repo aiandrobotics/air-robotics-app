@@ -25,6 +25,16 @@ void main() {
       expect(cmd, equals([0x03]));
     });
 
+    test('buildGetButtonConfig serializes opcode 0x0B', () {
+      final cmd = CommandBuilder.buildGetButtonConfig();
+      expect(cmd, equals([0x0B]));
+    });
+
+    test('buildFactoryResetAll serializes opcode 0x1F', () {
+      final cmd = CommandBuilder.buildFactoryResetAll();
+      expect(cmd, equals([0x1F]));
+    });
+
     test('buildRestoreFactoryPresets serializes opcode 0x0C', () {
       final cmd = CommandBuilder.buildRestoreFactoryPresets();
       expect(cmd, equals([0x0C]));

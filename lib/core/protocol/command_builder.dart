@@ -14,7 +14,8 @@ enum BleOpcode {
   jogMotorAngle(0x0D),
   identifyRobot(0x0E),
   getTelemetry(0x10),
-  setTelemetryStream(0x11);
+  setTelemetryStream(0x11),
+  factoryResetAll(0x1F);
 
   final int value;
   const BleOpcode(this.value);
@@ -119,5 +120,14 @@ class CommandBuilder {
       BleOpcode.setTelemetryStream.value,
       enable ? 1 : 0,
     ]);
+  }
+
+  /// Builds opcode `0x1F`: Full factory reset.
+  ///
+  /// Wipes all routines in flash, restores factory defaults, homes all servos,
+  /// erases all bonded phone keys from flash, terminates BLE connection,
+  /// and restarts indefinite pairing mode.
+  static Uint8List buildFactoryResetAll() {
+    return Uint8List.fromList([BleOpcode.factoryResetAll.value]);
   }
 }

@@ -24,11 +24,28 @@ flutter test test/widget_test.dart
 - Verifies dedicated pair screen displays step-by-step pairing guidance and live candidates.
 - Verifies pre-permission prompt display and actions.
 
-### 3. Full Regression Test Suite
+### 3. Fabrica Firmware Full Command Integration Tests
+```bash
+flutter test test/protocol/command_builder_test.dart
+flutter test test/protocol/command_pipeline_test.dart
+flutter test test/protocol/routine_models_test.dart
+flutter test test/ui_engine/emergency_stop_widget_test.dart
+flutter test test/ui_engine/status_banner_widget_test.dart
+flutter test test/ui_engine/timeline_sequencer_widget_test.dart
+flutter test test/ui_engine/raw_hex_console_widget_test.dart
+```
+- Verifies all opcodes `0x00`–`0x1F` encode correctly into binary payloads.
+- Verifies 212-byte `ButtonConfigTable` packing and unpacking with IEEE 802.3 CRC32 verification.
+- Verifies fast-path `withoutResponse: true` for E-Stop (`0x03`) and Jog (`0x0D`).
+- Verifies E-stop unlatching via `stopSequence` (`0x02`).
+- Verifies Full Factory Reset (`0x1F`) and Factory Presets Restore (`0x0C`).
+- Verifies DIS hardware metadata card display and quick diagnostic chips.
+
+### 4. Full Regression Test Suite
 ```bash
 flutter test
 ```
-- 100% pass rate across all existing tests (107 tests passing).
+- 100% pass rate across all tests (114 tests passing).
 
 ---
 

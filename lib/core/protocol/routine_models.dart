@@ -193,3 +193,47 @@ class FoldRoutine {
     return buffer;
   }
 }
+
+/// Represents the full 212-byte configuration table for all 4 physical button presets
+/// stored in ESP32 NVS flash and synchronized across the `FAB3` characteristic.
+class ButtonConfigTable {
+  static const int totalBytes = 212; // 4 * 53 bytes
+  static const int routineBytes = 53;
+
+  final Map<int, FoldRoutine> routines;
+
+  const ButtonConfigTable({required this.routines});
+
+  /// Decodes a 212-byte binary payload into 4 button routines.
+  factory ButtonConfigTable.fromBytes(Uint8List bytes) {
+    if (bytes.length < totalBytes) {
+      throw ArgumentError(
+        'Insufficient bytes for ButtonConfigTable: expected $totalBytes bytes, got ${bytes.length}',
+      );
+    }
+
+    final map = <int, FoldRoutine>{};
+    for (int i = 0; i < 4; i++) {
+      final slot = i + 1;
+      final start = i * routineBytes;
+      final slice = bytes.sublist(start, start + routineBytes);
+      map[slot] = FoldRoutine.fromBytes(slice, verifyCrc: false);
+    }
+
+    return ButtonConfigTable(routines: map);
+  }
+
+  /// Serializes all 4 routines into a 212-byte packed table.
+  Uint8List toBytes() {
+    final buffer = Uint8List(totalBytes);
+    for (int i = 0; i < 4; i++) {
+      final slot = i + 1;
+      final routine = routines[slot];
+      if (routine != null) {
+        final rBytes = routine.toBytes();
+        buffer.setRange(i * routineBytes, (i + 1) * routineBytes, rBytes);
+      }
+    }
+    return buffer;
+  }
+}

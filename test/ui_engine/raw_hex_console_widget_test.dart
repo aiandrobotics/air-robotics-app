@@ -96,6 +96,18 @@ void main() {
       // Check packet logged
       expect(find.textContaining('RX #00042'), findsOneWidget);
 
+      // Verify DIS metadata card
+      expect(find.text('DEVICE INFORMATION SERVICE (DIS 0x180A)'), findsOneWidget);
+      expect(find.text('Fabrica-DevKit-v1'), findsOneWidget);
+      expect(find.text('v1.13.0'), findsOneWidget);
+      expect(find.text('AIR Robotics'), findsOneWidget);
+
+      // Verify quick diagnostic action chips
+      expect(find.text('SNAPSHOT (0x10)'), findsOneWidget);
+      expect(find.text('PAUSE STREAM (0x11)'), findsOneWidget);
+      expect(find.text('IDENTIFY (0x0E)'), findsOneWidget);
+      expect(find.text('GET CONFIG (0x0B)'), findsOneWidget);
+
       // Enter hex opcode 0E (Identify)
       final textField = find.byType(TextField);
       expect(textField, findsOneWidget);

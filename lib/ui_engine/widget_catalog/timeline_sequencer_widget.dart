@@ -248,6 +248,21 @@ class _TimelineSequencerWidgetState
     }
   }
 
+  Future<void> _syncFromRobot() async {
+    setState(() => _isBusy = true);
+    _setStatus('Requesting sequence sync (0x0B)...');
+    try {
+      final pipeline = ref.read(commandPipelineProvider);
+      await pipeline.getButtonConfig();
+      _setStatus('Sync requested: FAB3 212-byte table emitted',
+          color: AppColors.emerald);
+    } catch (e) {
+      _setStatus('Sync error: $e', color: AppColors.crimson);
+    } finally {
+      if (mounted) setState(() => _isBusy = false);
+    }
+  }
+
   void _showAddStepDialog() {
     int flap1 = 0;
     int? flap2;
@@ -551,19 +566,32 @@ class _TimelineSequencerWidgetState
 
             const SizedBox(height: AppTokens.space8),
 
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton.icon(
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.textSecondary,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                TextButton.icon(
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.cyan,
+                  ),
+                  icon: const Icon(Icons.sync, size: 16),
+                  label: const Text(
+                    'SYNC FROM ROBOT (0x0B)',
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                  ),
+                  onPressed: _isBusy ? null : _syncFromRobot,
                 ),
-                icon: const Icon(Icons.restore, size: 16),
-                label: const Text(
-                  'RESTORE FACTORY PRESETS',
-                  style: TextStyle(fontSize: 10),
+                TextButton.icon(
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.textSecondary,
+                  ),
+                  icon: const Icon(Icons.restore, size: 16),
+                  label: const Text(
+                    'RESTORE FACTORY PRESETS',
+                    style: TextStyle(fontSize: 10),
+                  ),
+                  onPressed: _isBusy ? null : _restoreFactoryPresets,
                 ),
-                onPressed: _isBusy ? null : _restoreFactoryPresets,
-              ),
+              ],
             ),
           ],
         ),

@@ -91,4 +91,27 @@ void main() {
       expect(compact[0], equals(2));
     });
   });
+
+  group('ButtonConfigTable Model (FAB3 212-byte table)', () {
+    test('serializes and deserializes full 212-byte 4-button table', () {
+      final r1 = FoldRoutine.create([FoldStep.single(0)]);
+      final r2 = FoldRoutine.create([FoldStep.single(1)]);
+      final r3 = FoldRoutine.create([FoldStep.single(2)]);
+      final r4 = FoldRoutine.create([FoldStep.single(3)]);
+
+      final table = ButtonConfigTable(
+        routines: {1: r1, 2: r2, 3: r3, 4: r4},
+      );
+
+      final bytes = table.toBytes();
+      expect(bytes.length, equals(212));
+
+      final decoded = ButtonConfigTable.fromBytes(bytes);
+      expect(decoded.routines.length, equals(4));
+      expect(decoded.routines[1]!.steps[0].motorIds[0], equals(0));
+      expect(decoded.routines[2]!.steps[0].motorIds[0], equals(1));
+      expect(decoded.routines[3]!.steps[0].motorIds[0], equals(2));
+      expect(decoded.routines[4]!.steps[0].motorIds[0], equals(3));
+    });
+  });
 }
