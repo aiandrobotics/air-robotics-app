@@ -35,6 +35,7 @@ class BleScanner {
   final BleTransport transport;
   final List<String> allowedPrefixes;
   final double smoothingAlpha;
+  final Duration staleThreshold;
 
   final Map<String, RssiSmoother> _smoothers = {};
   final Map<String, DiscoveredRobot> _discoveredMap = {};
@@ -42,11 +43,13 @@ class BleScanner {
       StreamController<List<DiscoveredRobot>>.broadcast();
 
   StreamSubscription<List<DiscoveredRobot>>? _scanSub;
+  Timer? _pruneTimer;
 
   BleScanner({
     required this.transport,
     this.allowedPrefixes = const ['Fabrica-', 'AIR-'],
     this.smoothingAlpha = 0.25,
+    this.staleThreshold = const Duration(seconds: 5),
   }) {
     _scanSub = transport.scanResultsStream.listen(_onRawScanResults);
   }
@@ -67,6 +70,7 @@ class BleScanner {
       _smoothers.clear();
       _robotsController.add([]);
     }
+    _startPruneTimer();
     await transport.startScan(
       timeout: timeout,
       namePrefixes: allowedPrefixes,
@@ -74,7 +78,19 @@ class BleScanner {
   }
 
   Future<void> stopScan() async {
+    _stopPruneTimer();
     await transport.stopScan();
+  }
+
+  void _startPruneTimer() {
+    _pruneTimer?.cancel();
+    _pruneTimer =
+        Timer.periodic(const Duration(seconds: 1), (_) => _pruneStaleDevices());
+  }
+
+  void _stopPruneTimer() {
+    _pruneTimer?.cancel();
+    _pruneTimer = null;
   }
 
   /// Processes raw scan results from the transport layer.
@@ -105,12 +121,25 @@ class BleScanner {
       );
     }
 
-    // Prune devices not seen in the last 30 seconds
+    _robotsController.add(_sortedRobots());
+  }
+
+  void _pruneStaleDevices() {
+    if (_discoveredMap.isEmpty) return;
+    final now = DateTime.now();
+    bool changed = false;
     _discoveredMap.removeWhere((id, robot) {
-      return now.difference(robot.lastSeen).inSeconds > 30;
+      final isStale = now.difference(robot.lastSeen) >= staleThreshold;
+      if (isStale) {
+        _smoothers.remove(id);
+        changed = true;
+      }
+      return isStale;
     });
 
-    _robotsController.add(_sortedRobots());
+    if (changed) {
+      _robotsController.add(_sortedRobots());
+    }
   }
 
   bool _matchesPrefix(String name) {
@@ -129,6 +158,7 @@ class BleScanner {
   }
 
   void dispose() {
+    _pruneTimer?.cancel();
     _scanSub?.cancel();
     _robotsController.close();
   }

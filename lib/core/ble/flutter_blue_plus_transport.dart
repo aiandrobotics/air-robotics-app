@@ -57,6 +57,7 @@ class FlutterBluePlusTransport implements BleTransport {
       timeout: timeout,
       androidUsesFineLocation: false,
       continuousUpdates: true,
+      removeIfGone: const Duration(seconds: 5),
     );
   }
 

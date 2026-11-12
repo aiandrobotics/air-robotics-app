@@ -123,5 +123,30 @@ void main() {
       expect(discovered.first.id, equals('dev_strong'));
       expect(discovered.last.id, equals('dev_weak'));
     });
+
+    test('automatically prunes stale robots when advertisements cease', () async {
+      final fastScanner = BleScanner(
+        transport: transport,
+        staleThreshold: const Duration(milliseconds: 500),
+      );
+      addTearDown(() => fastScanner.dispose());
+      await fastScanner.startScan();
+
+      final candidate = DiscoveredRobot(
+        id: 'dev_unplugged',
+        name: 'Fabrica-Unplugged',
+        rawRssi: -50,
+        smoothedRssi: -50,
+        lastSeen: DateTime.now(),
+      );
+
+      transport.emitDiscoveredRobots([candidate]);
+      await pumpEventQueue();
+      expect(fastScanner.discoveredRobots.length, equals(1));
+
+      // Wait past the stale threshold for the prune timer to fire
+      await Future<void>.delayed(const Duration(milliseconds: 1200));
+      expect(fastScanner.discoveredRobots, isEmpty);
+    });
   });
 }
