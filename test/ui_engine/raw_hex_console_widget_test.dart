@@ -99,7 +99,7 @@ void main() {
 
       // Verify DIS metadata card
       expect(find.text('DEVICE INFORMATION'), findsOneWidget);
-      expect(find.text('Fabrica-DevKit-v1'), findsOneWidget);
+      expect(find.text('Fabrica'), findsOneWidget);
       expect(find.text('v1.13.0'), findsOneWidget);
       expect(find.text('AIR Robotics'), findsOneWidget);
 

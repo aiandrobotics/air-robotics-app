@@ -22,6 +22,7 @@ class ProfileResolver {
       'assets/profiles/air-device-profile.schema.json';
 
   static const Map<String, String> _bundledAssetMap = {
+    'fabrica': 'assets/profiles/fabrica-devkit-v1.json',
     'fabrica-devkit-v1': 'assets/profiles/fabrica-devkit-v1.json',
   };
 

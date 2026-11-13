@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/ble/ble_providers.dart';
 import '../core/ble/ble_transport_interface.dart';
 import '../core/fleet/fleet_providers.dart';
+import '../core/fleet/registered_robot.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_tokens.dart';
 import 'pair_robot_screen.dart';
@@ -20,6 +21,8 @@ class AddDeviceCatalogScreen extends ConsumerStatefulWidget {
 }
 
 class _AddDeviceCatalogScreenState extends ConsumerState<AddDeviceCatalogScreen> {
+  String? _connectingDeviceId;
+
   @override
   void initState() {
     super.initState();
@@ -30,19 +33,43 @@ class _AddDeviceCatalogScreenState extends ConsumerState<AddDeviceCatalogScreen>
     });
   }
 
-  void _navigateToPairScreen(DiscoveredRobot robot) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (context) => PairRobotScreen(
-          targetModel: robot.name.toLowerCase().startsWith('fabrica')
-              ? 'Fabrica-DevKit-v1'
-              : 'AIR-Generic',
-          namePrefix: robot.name.contains('-')
-              ? '${robot.name.split('-').first}-'
-              : 'Fabrica-',
-        ),
-      ),
-    );
+  Future<void> _pairAndConnect(DiscoveredRobot robot) async {
+    setState(() => _connectingDeviceId = robot.id);
+    ref.read(bleConnectionManagerProvider).resetManualDisconnect();
+    try {
+      await ref.read(bleScannerProvider).stopScan();
+      final manager = ref.read(bleConnectionManagerProvider);
+      await manager.connect(robot);
+      await ref.read(fleetStorageProvider).setLastConnectedRobotId(robot.id);
+
+      final registeredRobot = RegisteredRobot(
+        id: robot.id,
+        name: robot.name,
+        modelNumber: robot.name.toLowerCase().startsWith('fabrica')
+            ? 'Fabrica'
+            : 'AIR-Generic',
+        pairedAt: DateTime.now(),
+      );
+      await ref.read(registeredRobotsProvider.notifier).addRobot(registeredRobot);
+
+      if (mounted) {
+        ref.read(isViewingDeviceProvider.notifier).openDevice();
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to connect to ${robot.name}: $e'),
+            backgroundColor: AppColors.crimson,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _connectingDeviceId = null);
+      }
+    }
   }
 
   @override
@@ -192,31 +219,34 @@ class _AddDeviceCatalogScreenState extends ConsumerState<AddDeviceCatalogScreen>
   }
 
   Widget _buildDiscoveredCandidateCard(DiscoveredRobot robot) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => _navigateToPairScreen(robot),
+    final isConnecting = _connectingDeviceId == robot.id;
+    final isFabrica = robot.name.toLowerCase().contains('fabrica');
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
         borderRadius: AppTokens.borderRadiusMd,
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: AppTokens.borderRadiusMd,
-            border: Border.all(
-              color: robot.isPairingMode
-                  ? AppColors.emerald.withValues(alpha: 0.8)
-                  : AppColors.cyan.withValues(alpha: 0.5),
-              width: robot.isPairingMode ? 1.5 : 1.0,
-            ),
-            boxShadow: robot.isPairingMode
-                ? [
-                    BoxShadow(
-                      color: AppColors.emerald.withValues(alpha: 0.12),
-                      blurRadius: 10,
-                      spreadRadius: 1,
-                    ),
-                  ]
-                : null,
-          ),
+        border: Border.all(
+          color: robot.isPairingMode
+              ? AppColors.emerald.withValues(alpha: 0.7)
+              : AppColors.border,
+          width: robot.isPairingMode ? 1.5 : 1.0,
+        ),
+        boxShadow: robot.isPairingMode
+            ? [
+                BoxShadow(
+                  color: AppColors.emerald.withValues(alpha: 0.12),
+                  blurRadius: 10,
+                  spreadRadius: 1,
+                ),
+              ]
+            : null,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: AppTokens.borderRadiusMd,
+          onTap: isConnecting ? null : () => _pairAndConnect(robot),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: Row(
@@ -236,9 +266,13 @@ class _AddDeviceCatalogScreenState extends ConsumerState<AddDeviceCatalogScreen>
                     ),
                   ),
                   child: Icon(
-                    Icons.precision_manufacturing,
+                    isFabrica
+                        ? Icons.dry_cleaning
+                        : Icons.precision_manufacturing,
                     size: 22,
-                    color: robot.isPairingMode ? AppColors.emerald : AppColors.cyan,
+                    color: robot.isPairingMode
+                        ? AppColors.emerald
+                        : AppColors.cyan,
                   ),
                 ),
                 const SizedBox(width: AppTokens.space12),
@@ -246,84 +280,67 @@ class _AddDeviceCatalogScreenState extends ConsumerState<AddDeviceCatalogScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              robot.name,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textPrimary,
-                              ),
-                            ),
-                          ),
-                          if (robot.isPairingMode) ...[
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 5,
-                                vertical: 1.5,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.emerald.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(3),
-                                border: Border.all(
-                                  color: AppColors.emerald.withValues(alpha: 0.6),
-                                ),
-                              ),
-                              child: const Text(
-                                'PAIRING READY',
-                                style: TextStyle(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.emerald,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
+                      Text(
+                        robot.name,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
                       ),
                       const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          _buildRssiBadge(robot.smoothedRssi),
-                          const Text(' • ', style: TextStyle(color: AppColors.textMuted, fontSize: 10)),
-                          Text(
-                            'ID: ${robot.id.substring(0, math.min(10, robot.id.length))}',
-                            style: const TextStyle(
-                              fontSize: 10,
-                              fontFamily: 'monospace',
-                              color: AppColors.textMuted,
-                            ),
-                          ),
-                        ],
+                      Text(
+                        'ID: ${robot.id.substring(0, math.min(10, robot.id.length))}',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontFamily: 'monospace',
+                          color: AppColors.textMuted,
+                        ),
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(width: AppTokens.space8),
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: robot.isPairingMode
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: robot.isPairingMode
                         ? AppColors.emerald
                         : AppColors.cyan,
-                    foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: AppTokens.borderRadiusSm,
-                    ),
+                    borderRadius: AppTokens.borderRadiusSm,
                   ),
-                  icon: const Icon(Icons.arrow_forward, size: 14),
-                  label: const Text(
-                    'PAIR',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  onPressed: () => _navigateToPairScreen(robot),
+                  child: isConnecting
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.black,
+                          ),
+                        )
+                      : const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'PAIR & CONNECT',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black,
+                              ),
+                            ),
+                            SizedBox(width: 4),
+                            Icon(
+                              Icons.arrow_forward,
+                              size: 13,
+                              color: Colors.black,
+                            ),
+                          ],
+                        ),
                 ),
               ],
             ),
@@ -334,6 +351,17 @@ class _AddDeviceCatalogScreenState extends ConsumerState<AddDeviceCatalogScreen>
   }
 
   Widget _buildFabricaCard(BuildContext context) {
+    void navigateToPairFabrica() {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (context) => const PairRobotScreen(
+            targetModel: 'Fabrica',
+            namePrefix: 'Fabrica-',
+          ),
+        ),
+      );
+    }
+
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -350,167 +378,131 @@ class _AddDeviceCatalogScreenState extends ConsumerState<AddDeviceCatalogScreen>
           ),
         ],
       ),
-      child: Padding(
-        padding: AppTokens.paddingCard,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: AppTokens.borderRadiusLg,
+          onTap: navigateToPairFabrica,
+          child: Padding(
+            padding: AppTokens.paddingCard,
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceHighlight,
-                    borderRadius: AppTokens.borderRadiusMd,
-                    border: Border.all(color: AppColors.cyan),
-                  ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.precision_manufacturing,
-                      color: AppColors.cyan,
-                      size: 30,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: AppTokens.space12),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'FABRICA',
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.2,
-                          color: AppColors.textPrimary,
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceHighlight,
+                        borderRadius: AppTokens.borderRadiusMd,
+                        border: Border.all(color: AppColors.cyan),
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.dry_cleaning,
+                          color: AppColors.cyan,
+                          size: 30,
                         ),
                       ),
-                      SizedBox(height: 2),
-                      Text(
-                        'Cloths Folding Robot',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
+                    ),
+                    const SizedBox(width: AppTokens.space12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'FABRICA',
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.2,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'Cloths Folding Robot',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppTokens.space12),
+                const Text(
+                  'Automated garment folder with multi-garment presets and tactile single-button operation.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textPrimary,
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: AppTokens.space12),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.amber.withValues(alpha: 0.1),
+                    borderRadius: AppTokens.borderRadiusSm,
+                    border: Border.all(
+                      color: AppColors.amber.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(
+                        Icons.touch_app_outlined,
+                        size: 16,
+                        color: AppColors.amber,
+                      ),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Pairing mode: Press and hold any button on the Fabrica control panel for 3 seconds (Status LED will blink rapidly).',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: AppColors.amber,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
+                const SizedBox(height: AppTokens.space16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.cyan,
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: AppTokens.borderRadiusSm,
+                      ),
+                    ),
+                    icon: const Icon(Icons.bluetooth_searching, size: 18),
+                    label: const Text(
+                      'PAIR FABRICA NOW',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                    onPressed: navigateToPairFabrica,
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: AppTokens.space12),
-            const Text(
-              'Automated garment folder with multi-garment presets and tactile single-button operation.',
-              style: TextStyle(
-                fontSize: 12,
-                color: AppColors.textPrimary,
-                height: 1.35,
-              ),
-            ),
-            const SizedBox(height: AppTokens.space12),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: AppColors.amber.withValues(alpha: 0.1),
-                borderRadius: AppTokens.borderRadiusSm,
-                border: Border.all(
-                  color: AppColors.amber.withValues(alpha: 0.3),
-                ),
-              ),
-              child: const Row(
-                children: [
-                  Icon(
-                    Icons.touch_app_outlined,
-                    size: 16,
-                    color: AppColors.amber,
-                  ),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Pairing mode: Press and hold Button 1 for 3 seconds (Status LED will blink rapidly).',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: AppColors.amber,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppTokens.space16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.cyan,
-                  foregroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: AppTokens.borderRadiusSm,
-                  ),
-                ),
-                icon: const Icon(Icons.bluetooth_searching, size: 18),
-                label: const Text(
-                  'PAIR FABRICA NOW',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.8,
-                  ),
-                ),
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (context) => const PairRobotScreen(
-                        targetModel: 'Fabrica-DevKit-v1',
-                        namePrefix: 'Fabrica-',
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
+          ),
         ),
       ),
-    );
-  }
-
-  Widget _buildRssiBadge(double smoothedRssi) {
-    final rounded = smoothedRssi.round();
-    final bars = rounded >= -65 ? 3 : (rounded >= -80 ? 2 : 1);
-    final color = bars == 3
-        ? AppColors.emerald
-        : (bars == 2 ? AppColors.amber : AppColors.crimson);
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (int i = 1; i <= 3; i++)
-          Container(
-            width: 3,
-            height: 4.0 + (i * 3.0),
-            margin: const EdgeInsets.only(right: 1.5),
-            decoration: BoxDecoration(
-              color: i <= bars ? color : AppColors.surfaceHighlight,
-              borderRadius: BorderRadius.circular(1),
-            ),
-          ),
-        const SizedBox(width: 4),
-        Text(
-          '$rounded dBm',
-          style: TextStyle(
-            fontSize: 10,
-            fontFamily: 'monospace',
-            color: color,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
     );
   }
 }

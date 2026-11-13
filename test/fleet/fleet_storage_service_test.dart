@@ -152,7 +152,7 @@ void main() {
       final robot = RegisteredRobot.fromJson(json);
       expect(robot.id, equals('test-123'));
       expect(robot.name, equals('AIR Robot'));
-      expect(robot.modelNumber, equals('Fabrica-DevKit-v1'));
+      expect(robot.modelNumber, equals('Fabrica'));
       expect(robot.pairedAt, isNotNull);
     });
 

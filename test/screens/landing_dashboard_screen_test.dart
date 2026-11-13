@@ -56,8 +56,8 @@ void main() {
       expect(find.text('AIR ROBOTICS'), findsOneWidget);
       expect(find.text('ADD NEW ROBOT'), findsOneWidget);
       expect(find.text('Pair AIR robots'), findsOneWidget);
-      expect(find.text('YOUR DEVICES'), findsOneWidget);
-      expect(find.text('No Devices Paired Yet'), findsOneWidget);
+      expect(find.text('YOUR ROBOTS'), findsOneWidget);
+      expect(find.text('No Robots Paired Yet'), findsOneWidget);
       expect(find.text('ADD YOUR FIRST ROBOT'), findsOneWidget);
       expect(find.text('DISCOVERED ROBOTS'), findsOneWidget);
       expect(find.text('AUTO-SCANNING'), findsOneWidget);
@@ -106,7 +106,7 @@ void main() {
       expect(mockTransport.currentConnectionState, BleConnectionState.connected);
       expect(find.text('CONNECTED'), findsOneWidget);
       expect(find.text('OPEN'), findsOneWidget);
-      expect(find.textContaining('-58 dBm'), findsOneWidget);
+      expect(find.text('Strong'), findsOneWidget);
     });
 
     testWidgets('renders candidate discovered robots and connects to them',
@@ -133,11 +133,10 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.text('Fabrica-9999'), findsOneWidget);
-      expect(find.text('PAIRING'), findsOneWidget);
-      expect(find.text('CONNECT'), findsOneWidget);
+      expect(find.text('PAIR & CONNECT'), findsOneWidget);
 
-      // Tap CONNECT
-      await tester.tap(find.text('CONNECT'));
+      // Tap PAIR & CONNECT
+      await tester.tap(find.text('PAIR & CONNECT'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
@@ -332,7 +331,7 @@ void main() {
 
       // Connect to candidate failure catch block (lines 136-139)
       mockTransport.failNextConnect = true;
-      final connectCandidateBtn = find.text('CONNECT').first;
+      final connectCandidateBtn = find.text('PAIR & CONNECT').first;
       await tester.tap(connectCandidateBtn);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));

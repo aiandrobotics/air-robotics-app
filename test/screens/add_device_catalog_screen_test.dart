@@ -47,7 +47,7 @@ void main() {
       expect(find.text('SUPPORTED ROBOTS'), findsOneWidget);
       expect(find.text('FABRICA'), findsOneWidget);
       expect(find.text('Cloths Folding Robot'), findsOneWidget);
-      expect(find.textContaining('Press and hold Button 1 for 3 seconds'), findsOneWidget);
+      expect(find.textContaining('Press and hold any button on the Fabrica control panel for 3 seconds'), findsOneWidget);
       expect(find.text('PAIR FABRICA NOW'), findsOneWidget);
 
       // Verify removed elements are NOT present
@@ -63,7 +63,7 @@ void main() {
       expect(find.text('AIR ROVER-S'), findsNothing);
     });
 
-    testWidgets('tapping Pair Fabrica Now navigates to PairRobotScreen',
+    testWidgets('tapping Fabrica card anywhere navigates to PairRobotScreen',
         (tester) async {
       await tester.binding.setSurfaceSize(const Size(600, 1000));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -82,17 +82,17 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      await tester.tap(find.text('PAIR FABRICA NOW'));
+      await tester.tap(find.text('Cloths Folding Robot'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
-      expect(find.text('PAIR FABRICA-DEVKIT-V1'), findsOneWidget);
+      expect(find.text('PAIR FABRICA'), findsOneWidget);
       expect(find.text('FABRICA PAIRING INSTRUCTIONS'), findsOneWidget);
-      expect(find.text('Press and hold Button 1 for 3 seconds to enter pairing mode.'), findsOneWidget);
+      expect(find.text('Press and hold any button on the Fabrica control panel for 3 seconds to enter pairing mode.'), findsOneWidget);
       expect(find.text('The status LED will blink rapidly to confirm pairing mode is active.'), findsOneWidget);
     });
 
-    testWidgets('displays auto discovered robot at top when detected and jumps to pair screen on tap',
+    testWidgets('displays auto discovered robot at top when detected and pairs directly on tap',
         (tester) async {
       await tester.binding.setSurfaceSize(const Size(600, 1000));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -132,20 +132,20 @@ void main() {
       expect(find.text('AUTO DISCOVERED ROBOT'), findsOneWidget);
       expect(find.text('1 READY'), findsOneWidget);
       expect(find.text('Fabrica-1234'), findsOneWidget);
-      expect(find.text('PAIRING READY'), findsOneWidget);
-      expect(find.text('PAIR'), findsOneWidget);
+      expect(find.text('PAIR & CONNECT'), findsOneWidget);
 
-      // Tap on the discovered card / PAIR button to jump to pair screen
-      await tester.tap(find.text('PAIR'));
+      // Tap on the discovered card / PAIR & CONNECT button to directly pair and connect
+      await tester.tap(find.text('PAIR & CONNECT'));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump(const Duration(milliseconds: 100));
 
-      // Verified jumped to PairRobotScreen
-      expect(find.text('PAIR FABRICA-DEVKIT-V1'), findsOneWidget);
-      expect(find.text('FABRICA PAIRING INSTRUCTIONS'), findsOneWidget);
+      // Verified connected and registered in fleet!
+      expect(mockTransport.currentConnectionState, BleConnectionState.connected);
+      final registered = await mockFleetStorage.getRegisteredRobots();
+      expect(registered.any((r) => r.id == 'fabrica-live-1234'), isTrue);
     });
 
-    testWidgets('renders multiple discovered candidates with non-pairing mode and varying RSSI', (tester) async {
+    testWidgets('renders multiple discovered candidates and tapping anywhere on candidate card pairs and connects', (tester) async {
       await tester.binding.setSurfaceSize(const Size(600, 1000));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -190,8 +190,10 @@ void main() {
       // Tap on card InkWell directly
       await tester.tap(find.text('Fabrica-One'));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-      expect(find.text('PAIR FABRICA-DEVKIT-V1'), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(mockTransport.currentConnectionState, BleConnectionState.connected);
+      final registered = await mockFleetStorage.getRegisteredRobots();
+      expect(registered.any((r) => r.id == 'fab-1'), isTrue);
     });
   });
 }

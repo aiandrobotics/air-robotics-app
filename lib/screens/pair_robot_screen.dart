@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -17,7 +16,7 @@ class PairRobotScreen extends ConsumerStatefulWidget {
 
   const PairRobotScreen({
     super.key,
-    this.targetModel = 'Fabrica-DevKit-v1',
+    this.targetModel = 'Fabrica',
     this.namePrefix = 'Fabrica-',
   });
 
@@ -60,13 +59,6 @@ class _PairRobotScreenState extends ConsumerState<PairRobotScreen>
     try {
       // 1. Explicitly stop scanning so radio is completely dedicated to GATT link
       await ref.read(bleScannerProvider).stopScan();
-
-      // 2. Clear any stale bond on Android for pairing-mode candidate
-      if (defaultTargetPlatform == TargetPlatform.android) {
-        try {
-          await ref.read(bleTransportProvider).removeBond(robot.id);
-        } catch (_) {}
-      }
 
       final manager = ref.read(bleConnectionManagerProvider);
       manager.resetManualDisconnect();
@@ -120,12 +112,17 @@ class _PairRobotScreenState extends ConsumerState<PairRobotScreen>
     final allRobotsAsync = ref.watch(discoveredRobotsProvider);
     final allRobots = allRobotsAsync.value ?? [];
 
-    // Filter discovered robots matching target prefix or show all if prefix empty
-    final matchingRobots = widget.namePrefix.isEmpty
-        ? allRobots
-        : allRobots
-            .where((r) => r.name.toLowerCase().startsWith(widget.namePrefix.toLowerCase()))
-            .toList();
+    final registeredAsync = ref.watch(registeredRobotsProvider);
+    final registeredList = registeredAsync.value ?? [];
+    final registeredIds = registeredList.map((r) => r.id).toSet();
+
+    // Filter discovered robots: matching target prefix and NOT already paired
+    final matchingRobots = allRobots
+        .where((r) =>
+            !registeredIds.contains(r.id) &&
+            (widget.namePrefix.isEmpty ||
+                r.name.toLowerCase().startsWith(widget.namePrefix.toLowerCase())))
+        .toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -192,7 +189,7 @@ class _PairRobotScreenState extends ConsumerState<PairRobotScreen>
                         children: [
                           Text(
                             isScanning
-                                ? 'SEARCHING FOR NEARBY HARDWARE...'
+                                ? 'SEARCHING FOR NEARBY ${widget.targetModel.toUpperCase()}...'
                                 : 'SCAN PAUSED',
                             style: TextStyle(
                               fontSize: 11,
@@ -224,10 +221,10 @@ class _PairRobotScreenState extends ConsumerState<PairRobotScreen>
 
               const Row(
                 children: [
-                  Icon(Icons.devices, size: 14, color: AppColors.cyan),
+                  Icon(Icons.precision_manufacturing, size: 14, color: AppColors.cyan),
                   SizedBox(width: AppTokens.space4),
                   Text(
-                    'DISCOVERED CANDIDATES',
+                    'DISCOVERED ROBOTS',
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
@@ -298,7 +295,7 @@ class _PairRobotScreenState extends ConsumerState<PairRobotScreen>
             const SizedBox(height: 8),
             _buildInstructionStep(
               '2',
-              'Press and hold Button 1 for 3 seconds to enter pairing mode.',
+              'Press and hold any button on the Fabrica control panel for 3 seconds to enter pairing mode.',
             ),
             const SizedBox(height: 8),
             _buildInstructionStep(
@@ -313,7 +310,7 @@ class _PairRobotScreenState extends ConsumerState<PairRobotScreen>
             const SizedBox(height: 8),
             _buildInstructionStep(
               '2',
-              'Ensure Bluetooth pairing mode is active on the device.',
+              'Ensure Bluetooth pairing mode is active on the robot.',
             ),
           ],
         ],
@@ -391,7 +388,7 @@ class _PairRobotScreenState extends ConsumerState<PairRobotScreen>
             const SizedBox(height: AppTokens.space4),
             Text(
               isScanning
-                  ? 'Make sure your device is powered on and within range.'
+                  ? 'Make sure your robot is powered on and within range.'
                   : 'Check power switch and tap the top right icon to restart scan.',
               textAlign: TextAlign.center,
               style: const TextStyle(
@@ -407,6 +404,7 @@ class _PairRobotScreenState extends ConsumerState<PairRobotScreen>
 
   Widget _buildRobotCandidateCard(DiscoveredRobot robot) {
     final isConnecting = _connectingDeviceId == robot.id;
+    final isFabrica = robot.name.toLowerCase().contains('fabrica');
 
     return Container(
       decoration: BoxDecoration(
@@ -416,118 +414,121 @@ class _PairRobotScreenState extends ConsumerState<PairRobotScreen>
           color: robot.isPairingMode
               ? AppColors.emerald.withValues(alpha: 0.7)
               : AppColors.border,
+          width: robot.isPairingMode ? 1.5 : 1.0,
         ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: robot.isPairingMode
-                    ? AppColors.emerald.withValues(alpha: 0.15)
-                    : AppColors.surfaceHighlight,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: robot.isPairingMode
-                      ? AppColors.emerald
-                      : AppColors.border,
+        boxShadow: robot.isPairingMode
+            ? [
+                BoxShadow(
+                  color: AppColors.emerald.withValues(alpha: 0.12),
+                  blurRadius: 10,
+                  spreadRadius: 1,
                 ),
-              ),
-              child: Icon(
-                Icons.precision_manufacturing,
-                size: 22,
-                color: robot.isPairingMode ? AppColors.emerald : AppColors.cyan,
-              ),
-            ),
-            const SizedBox(width: AppTokens.space12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+              ]
+            : null,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: AppTokens.borderRadiusMd,
+          onTap: isConnecting ? null : () => _connectAndRegister(robot),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: robot.isPairingMode
+                        ? AppColors.emerald.withValues(alpha: 0.15)
+                        : AppColors.surfaceHighlight,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: robot.isPairingMode
+                          ? AppColors.emerald
+                          : AppColors.border,
+                    ),
+                  ),
+                  child: Icon(
+                    isFabrica
+                        ? Icons.dry_cleaning
+                        : Icons.precision_manufacturing,
+                    size: 22,
+                    color: robot.isPairingMode
+                        ? AppColors.emerald
+                        : AppColors.cyan,
+                  ),
+                ),
+                const SizedBox(width: AppTokens.space12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Flexible(
-                        child: Text(
-                          robot.name,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textPrimary,
-                          ),
+                      Text(
+                        robot.name,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
                         ),
                       ),
-                      if (robot.isPairingMode) ...[
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 5,
-                            vertical: 1.5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.emerald.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(3),
-                            border: Border.all(
-                              color: AppColors.emerald.withValues(alpha: 0.5),
-                            ),
-                          ),
-                          child: const Text(
-                            'PAIRING READY',
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.emerald,
-                            ),
-                          ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'ID: ${robot.id.substring(0, math.min(10, robot.id.length))}',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontFamily: 'monospace',
+                          color: AppColors.textMuted,
                         ),
-                      ],
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'RSSI: ${robot.smoothedRssi.round()} dBm • ID: ${robot.id.substring(0, math.min(12, robot.id.length))}',
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontFamily: 'monospace',
-                      color: AppColors.textMuted,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: AppTokens.space8),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.cyan,
-                foregroundColor: Colors.black,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                shape: RoundedRectangleBorder(
-                  borderRadius: AppTokens.borderRadiusSm,
                 ),
-              ),
-              onPressed: isConnecting ? null : () => _connectAndRegister(robot),
-              child: isConnecting
-                  ? const SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.black,
-                      ),
-                    )
-                  : const Text(
-                      'PAIR & CONNECT',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                const SizedBox(width: AppTokens.space8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: robot.isPairingMode
+                        ? AppColors.emerald
+                        : AppColors.cyan,
+                    borderRadius: AppTokens.borderRadiusSm,
+                  ),
+                  child: isConnecting
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.black,
+                          ),
+                        )
+                      : const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'PAIR & CONNECT',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black,
+                              ),
+                            ),
+                            SizedBox(width: 4),
+                            Icon(
+                              Icons.arrow_forward,
+                              size: 13,
+                              color: Colors.black,
+                            ),
+                          ],
+                        ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

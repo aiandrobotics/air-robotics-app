@@ -84,7 +84,7 @@ void main() {
 
       expect(find.text('RUNNING_MOTION'), findsOneWidget);
       expect(find.text('LED: RUNNING'), findsOneWidget);
-      expect(find.text('-58 dBm'), findsOneWidget);
+      expect(find.text('Strong'), findsOneWidget);
       expect(find.text('Heap: 198 KB'), findsOneWidget);
       expect(find.text('IDENTIFY'), findsOneWidget);
 
@@ -179,10 +179,10 @@ void main() {
       expect(find.text('CALIBRATING'), findsOneWidget);
       expect(find.text('LED: PAIRING'), findsOneWidget);
       expect(find.text('STORAGE FAULT'), findsOneWidget);
-      expect(find.text('-72 dBm'), findsOneWidget);
+      expect(find.text('Good'), findsOneWidget);
     });
 
-    testWidgets('renders identify LED, error machine state, and -82 dBm RSSI', (tester) async {
+    testWidgets('renders identify LED, error machine state, and Weak RSSI', (tester) async {
       final container = ProviderContainer(
         overrides: [
           bleTransportProvider.overrideWithValue(mockTransport),
@@ -219,7 +219,7 @@ void main() {
 
       expect(find.text('ERROR'), findsOneWidget);
       expect(find.text('LED: IDENTIFY'), findsOneWidget);
-      expect(find.text('-82 dBm'), findsOneWidget);
+      expect(find.text('Weak'), findsOneWidget);
     });
   });
 }

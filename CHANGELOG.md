@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-12
+- Standardized robot hardware model labeling from "Fabrica-DevKit-v1" to "Fabrica" across all UI screens, models, and fallback resolvers.
+- Updated pairing instructions across Add Device Catalog and Pair Robot screens to specify pressing and holding any button on the Fabrica control panel for 3 seconds.
+- Aligned discovered candidate item UI across dashboard and add-robot screens, making the entire card clickable for direct pairing and connection.
+- Filtered already-registered robots from the Pair Fabrica candidate list to prevent duplicate pairings.
+- Eliminated redundant explicit bonding calls and pre-connect unbonding to prevent duplicate OS pairing dialogs.
+- Updated radar scanning message on the pairing screen to "SEARCHING FOR NEARBY FABRICA...".
+
 ## 2026-11-11
 - Implemented opportunistic BLE auto-reconnection for paired fleet robots when detected in background scans or upon app resume.
 - Added WidgetsBindingObserver lifecycle handling to automatically restart scans and reconnect to paired hardware when returning to the app.

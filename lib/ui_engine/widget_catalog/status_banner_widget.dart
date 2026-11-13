@@ -75,15 +75,15 @@ class StatusBannerWidget extends ConsumerWidget {
                       Icon(
                         _rssiIcon(rssi),
                         size: 16,
-                        color: AppColors.cyan,
+                        color: _rssiColor(rssi),
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        '$rssi dBm',
-                        style: const TextStyle(
+                        _rssiLabel(rssi),
+                        style: TextStyle(
                           fontSize: 11,
-                          fontFamily: 'monospace',
-                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w600,
+                          color: _rssiColor(rssi),
                         ),
                       ),
                     ],
@@ -317,10 +317,21 @@ class StatusBannerWidget extends ConsumerWidget {
     }
   }
 
+  String _rssiLabel(int rssi) {
+    if (rssi >= -65) return 'Strong';
+    if (rssi >= -75) return 'Good';
+    return 'Weak';
+  }
+
+  Color _rssiColor(int rssi) {
+    if (rssi >= -65) return AppColors.emerald;
+    if (rssi >= -75) return AppColors.amber;
+    return AppColors.crimson;
+  }
+
   IconData _rssiIcon(int rssi) {
-    if (rssi >= -60) return Icons.network_wifi;
+    if (rssi >= -65) return Icons.network_wifi;
     if (rssi >= -75) return Icons.network_wifi_3_bar;
-    if (rssi >= -85) return Icons.network_wifi_2_bar;
     return Icons.network_wifi_1_bar;
   }
 }

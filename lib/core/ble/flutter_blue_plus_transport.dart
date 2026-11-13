@@ -144,23 +144,11 @@ class FlutterBluePlusTransport implements BleTransport {
   @override
   Future<bool> createBond() async {
     if (_activeDevice == null) return false;
-    // iOS CoreBluetooth automatically handles bonding/encryption at the GATT layer
-    // upon accessing protected characteristics; createBond is Android-only.
-    if (defaultTargetPlatform != TargetPlatform.android) {
-      return true;
-    }
-    // If already bonded, no action required
-    if (_activeDevice!.prevBondState == BluetoothBondState.bonded) {
-      return true;
-    }
-    try {
-      // Initiate native bonding asynchronously without blocking the GATT pipeline
-      // on Android system notification consent or pairing prompts
-      unawaited(_activeDevice!.createBond().catchError((_) {}));
-      return true;
-    } catch (_) {
-      return false;
-    }
+    // iOS and Android natively handle SMP Just Works bonding automatically upon
+    // receiving the peripheral's SMP Security Request or when accessing encrypted characteristics.
+    // Concurrently invoking native device.createBond() while the peripheral is initiating SMP
+    // causes the mobile OS to display duplicate system pairing popups.
+    return true;
   }
 
   @override

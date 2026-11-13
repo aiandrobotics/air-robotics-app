@@ -12,7 +12,7 @@ class RegisteredRobot {
   const RegisteredRobot({
     required this.id,
     required this.name,
-    this.modelNumber = 'Fabrica-DevKit-v1',
+    this.modelNumber = 'Fabrica',
     required this.pairedAt,
     this.customNickname,
   });
@@ -30,15 +30,18 @@ class RegisteredRobot {
         if (customNickname != null) 'customNickname': customNickname,
       };
 
-  factory RegisteredRobot.fromJson(Map<String, dynamic> json) => RegisteredRobot(
-        id: json['id'] as String,
-        name: json['name'] as String? ?? 'AIR Robot',
-        modelNumber: json['modelNumber'] as String? ?? 'Fabrica-DevKit-v1',
-        pairedAt: json['pairedAt'] != null
-            ? DateTime.parse(json['pairedAt'] as String)
-            : DateTime.now(),
-        customNickname: json['customNickname'] as String?,
-      );
+  factory RegisteredRobot.fromJson(Map<String, dynamic> json) {
+    final rawModel = json['modelNumber'] as String? ?? 'Fabrica';
+    return RegisteredRobot(
+      id: json['id'] as String,
+      name: json['name'] as String? ?? 'AIR Robot',
+      modelNumber: rawModel == 'Fabrica-DevKit-v1' ? 'Fabrica' : rawModel,
+      pairedAt: json['pairedAt'] != null
+          ? DateTime.parse(json['pairedAt'] as String)
+          : DateTime.now(),
+      customNickname: json['customNickname'] as String?,
+    );
+  }
 
   RegisteredRobot copyWith({
     String? id,

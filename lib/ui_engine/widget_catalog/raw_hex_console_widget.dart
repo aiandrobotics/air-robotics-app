@@ -362,7 +362,7 @@ class _RawHexConsoleWidgetState extends ConsumerState<RawHexConsoleWidget> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text('Model Number:', style: TextStyle(fontSize: 10, color: AppColors.textMuted)),
-                      Text('Fabrica-DevKit-v1', style: TextStyle(fontSize: 10, fontFamily: 'monospace', fontWeight: FontWeight.bold)),
+                      Text('Fabrica', style: TextStyle(fontSize: 10, fontFamily: 'monospace', fontWeight: FontWeight.bold)),
                     ],
                   ),
                   SizedBox(height: 2),

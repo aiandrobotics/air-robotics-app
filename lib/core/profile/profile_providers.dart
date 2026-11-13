@@ -37,7 +37,7 @@ class ActiveProfileNotifier extends Notifier<DeviceProfile> {
             if (model.isEmpty) {
               final name = manager.connectedRobot?.name ?? '';
               if (name.toLowerCase().contains('fabrica')) {
-                model = 'Fabrica-DevKit-v1';
+                model = 'Fabrica';
               } else if (name.isNotEmpty) {
                 model = name;
               }

@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -112,11 +111,6 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
     ref.read(bleConnectionManagerProvider).resetManualDisconnect();
     try {
       await ref.read(bleScannerProvider).stopScan();
-      if (defaultTargetPlatform == TargetPlatform.android && robot.isPairingMode) {
-        try {
-          await ref.read(bleTransportProvider).removeBond(robot.id);
-        } catch (_) {}
-      }
       final manager = ref.read(bleConnectionManagerProvider);
       await manager.connect(robot);
       await ref.read(fleetStorageProvider).setLastConnectedRobotId(robot.id);
@@ -126,7 +120,7 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
         id: robot.id,
         name: robot.name,
         modelNumber: robot.name.toLowerCase().startsWith('fabrica')
-            ? 'Fabrica-DevKit-v1'
+            ? 'Fabrica'
             : 'AIR-Generic',
         pairedAt: DateTime.now(),
       );
@@ -326,7 +320,7 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         content: Text(
-          'This will remove ${robot.displayName} from Your Devices on this phone. You can re-add it at any time.\n\nNote: To completely wipe robot memory and restore factory defaults, use "Factory Reset".',
+          'This will remove ${robot.displayName} from Your Robots on this phone. You can re-add it at any time.\n\nNote: To completely wipe robot memory and restore factory defaults, use "Factory Reset".',
           style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
         ),
         actions: [
@@ -445,11 +439,11 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
 
               const SizedBox(height: AppTokens.space24),
 
-              // 2. "YOUR DEVICES" Section
+              // 2. "YOUR ROBOTS" Section
               _buildSectionHeader(
-                title: 'YOUR DEVICES',
+                title: 'YOUR ROBOTS',
                 badgeText: '${registeredList.length} PAIRED',
-                icon: Icons.phonelink,
+                icon: Icons.precision_manufacturing,
               ),
               const SizedBox(height: AppTokens.space8),
 
@@ -663,7 +657,7 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
           ),
           const SizedBox(height: AppTokens.space8),
           const Text(
-            'No Devices Paired Yet',
+            'No Robots Paired Yet',
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.bold,
@@ -720,6 +714,8 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
         manager.connectedRobot?.id == robot.id;
     final isInRange = liveMatch != null || isConnected;
     final rssi = liveMatch?.smoothedRssi;
+    final isFabrica = robot.modelNumber.toLowerCase().contains('fabrica') ||
+        robot.name.toLowerCase().contains('fabrica');
 
     return Container(
       decoration: BoxDecoration(
@@ -754,7 +750,9 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
                 ),
               ),
               child: Icon(
-                Icons.precision_manufacturing,
+                isFabrica
+                    ? Icons.dry_cleaning
+                    : Icons.precision_manufacturing,
                 size: 22,
                 color: isConnected || isInRange
                     ? AppColors.emerald
@@ -961,6 +959,7 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
 
   Widget _buildDiscoveredCandidateCard(DiscoveredRobot robot) {
     final isConnecting = _connectingDeviceId == robot.id;
+    final isFabrica = robot.name.toLowerCase().contains('fabrica');
 
     return Container(
       decoration: BoxDecoration(
@@ -968,80 +967,68 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
         borderRadius: AppTokens.borderRadiusMd,
         border: Border.all(
           color: robot.isPairingMode
-              ? AppColors.emerald.withValues(alpha: 0.6)
+              ? AppColors.emerald.withValues(alpha: 0.7)
               : AppColors.border,
+          width: robot.isPairingMode ? 1.5 : 1.0,
         ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: robot.isPairingMode
-                    ? AppColors.emerald.withValues(alpha: 0.15)
-                    : AppColors.surfaceHighlight,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: robot.isPairingMode
-                      ? AppColors.emerald
-                      : AppColors.border,
+        boxShadow: robot.isPairingMode
+            ? [
+                BoxShadow(
+                  color: AppColors.emerald.withValues(alpha: 0.12),
+                  blurRadius: 10,
+                  spreadRadius: 1,
                 ),
-              ),
-              child: Icon(
-                Icons.precision_manufacturing,
-                size: 22,
-                color: robot.isPairingMode ? AppColors.emerald : AppColors.cyan,
-              ),
-            ),
-            const SizedBox(width: AppTokens.space12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+              ]
+            : null,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: AppTokens.borderRadiusMd,
+          onTap: isConnecting ? null : () => _connectToDiscoveredRobot(robot),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: robot.isPairingMode
+                        ? AppColors.emerald.withValues(alpha: 0.15)
+                        : AppColors.surfaceHighlight,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: robot.isPairingMode
+                          ? AppColors.emerald
+                          : AppColors.border,
+                    ),
+                  ),
+                  child: Icon(
+                    isFabrica
+                        ? Icons.dry_cleaning
+                        : Icons.precision_manufacturing,
+                    size: 22,
+                    color: robot.isPairingMode
+                        ? AppColors.emerald
+                        : AppColors.cyan,
+                  ),
+                ),
+                const SizedBox(width: AppTokens.space12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Flexible(
-                        child: Text(
-                          robot.name,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textPrimary,
-                          ),
+                      Text(
+                        robot.name,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
                         ),
                       ),
-                      if (robot.isPairingMode) ...[
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 5,
-                            vertical: 1.5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.emerald.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(3),
-                          ),
-                          child: const Text(
-                            'PAIRING',
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.emerald,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      _buildRssiBadge(robot.smoothedRssi),
-                      const Text(' • ', style: TextStyle(color: AppColors.textMuted, fontSize: 10)),
+                      const SizedBox(height: 2),
                       Text(
                         'ID: ${robot.id.substring(0, math.min(10, robot.id.length))}',
                         style: const TextStyle(
@@ -1052,38 +1039,51 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(width: AppTokens.space8),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.cyan,
-                foregroundColor: Colors.black,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                shape: RoundedRectangleBorder(
-                  borderRadius: AppTokens.borderRadiusSm,
                 ),
-              ),
-              onPressed: isConnecting ? null : () => _connectToDiscoveredRobot(robot),
-              child: isConnecting
-                  ? const SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.black,
-                      ),
-                    )
-                  : const Text(
-                      'CONNECT',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                const SizedBox(width: AppTokens.space8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: robot.isPairingMode
+                        ? AppColors.emerald
+                        : AppColors.cyan,
+                    borderRadius: AppTokens.borderRadiusSm,
+                  ),
+                  child: isConnecting
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.black,
+                          ),
+                        )
+                      : const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'PAIR & CONNECT',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black,
+                              ),
+                            ),
+                            SizedBox(width: 4),
+                            Icon(
+                              Icons.arrow_forward,
+                              size: 13,
+                              color: Colors.black,
+                            ),
+                          ],
+                        ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -1111,7 +1111,7 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
             const SizedBox(height: AppTokens.space12),
             Text(
               isScanning
-                  ? 'Auto-scanning for candidate hardware...'
+                  ? 'Auto-scanning for robots...'
                   : 'Scanning idle',
               style: const TextStyle(
                 fontSize: 13,
@@ -1142,6 +1142,9 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
     final color = bars == 3
         ? AppColors.emerald
         : (bars == 2 ? AppColors.amber : AppColors.crimson);
+    final label = bars == 3
+        ? 'Strong'
+        : (bars == 2 ? 'Good' : 'Weak');
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -1163,10 +1166,10 @@ class _LandingDashboardScreenState extends ConsumerState<LandingDashboardScreen>
         ),
         const SizedBox(width: 4),
         Text(
-          '$rounded dBm',
+          label,
           style: TextStyle(
             fontSize: 10,
-            fontFamily: 'monospace',
+            fontWeight: FontWeight.w600,
             color: color,
           ),
         ),

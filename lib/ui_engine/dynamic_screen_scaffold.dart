@@ -244,12 +244,9 @@ class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
     final activeProfile = ref.watch(activeProfileProvider);
     final registry = ref.watch(widgetRegistryProvider);
     final connStateAsync = ref.watch(bleConnectionStateProvider);
-    final telemetryAsync = ref.watch(latestTelemetryProvider);
 
     final connState = connStateAsync.value ??
         ref.read(bleConnectionManagerProvider).currentState;
-    final packet =
-        telemetryAsync.value ?? ref.read(telemetryBusProvider).latestPacket;
 
     final registeredRobots = ref.watch(registeredRobotsProvider).value ?? [];
     final connectedRobot = ref.watch(bleConnectionManagerProvider).connectedRobot;
@@ -312,9 +309,7 @@ class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
                   const SizedBox(width: 4),
                   Flexible(
                     child: Text(
-                      connState == BleConnectionState.ready
-                          ? '${connState.name.toUpperCase()} • ${packet?.bleRssiDbm ?? 0} dBm'
-                          : connState.name.toUpperCase(),
+                      connState.name.toUpperCase(),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
