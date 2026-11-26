@@ -1,4 +1,6 @@
 import 'package:air_robotics_app/core/profile/device_profile.dart';
+import 'package:air_robotics_app/core/profile/profile_providers.dart';
+import 'package:air_robotics_app/core/profile/profile_storage_service.dart';
 import 'package:air_robotics_app/ui_engine/widget_registry.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +14,11 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
+          overrides: [
+            profileStorageProvider.overrideWithValue(
+              InMemoryProfileStorageService(),
+            ),
+          ],
           child: MaterialApp(
             home: Scaffold(
               body: Consumer(
@@ -30,7 +37,8 @@ void main() {
           ),
         ),
       );
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.text('EMERGENCY STOP'), findsOneWidget);
     });
@@ -48,6 +56,11 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
+          overrides: [
+            profileStorageProvider.overrideWithValue(
+              InMemoryProfileStorageService(),
+            ),
+          ],
           child: MaterialApp(
             home: Scaffold(
               body: Consumer(
@@ -77,6 +90,11 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
+          overrides: [
+            profileStorageProvider.overrideWithValue(
+              InMemoryProfileStorageService(),
+            ),
+          ],
           child: MaterialApp(
             home: Scaffold(
               body: Consumer(
@@ -107,6 +125,11 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
+          overrides: [
+            profileStorageProvider.overrideWithValue(
+              InMemoryProfileStorageService(),
+            ),
+          ],
           child: MaterialApp(
             home: Scaffold(
               body: Consumer(
@@ -140,11 +163,13 @@ void main() {
           ),
         ),
       );
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.text('FLAP CANVAS'), findsOneWidget);
       expect(find.text('FOLDING TIMELINE'), findsOneWidget);
-      expect(find.text('LIVE 60 FPS'), findsOneWidget);
+      expect(find.text('LIVE 60 FPS'), findsNothing);
+      expect(find.text('EDIT ARRANGEMENT'), findsOneWidget);
       expect(find.text('PREVIEW ON ROBOT'), findsOneWidget);
     });
   });

@@ -88,3 +88,96 @@ final activeProfileProvider =
     NotifierProvider<ActiveProfileNotifier, DeviceProfile>(
   ActiveProfileNotifier.new,
 );
+
+/// State notifier managing user-defined custom subtitle names for preset buttons.
+class PresetNamesNotifier extends Notifier<Map<int, String>> {
+  @override
+  Map<int, String> build() {
+    final modelNumber =
+        ref.watch(activeProfileProvider.select((p) => p.modelNumber));
+    final storage = ref.watch(profileStorageProvider);
+
+    Future.microtask(() async {
+      final loaded = await storage.getPresetNames(modelNumber);
+      if (ref.mounted && loaded.isNotEmpty) {
+        state = loaded;
+      }
+    });
+
+    return const {};
+  }
+
+  /// Renames a preset button's custom subtitle. Empty string clears the custom name.
+  Future<void> renamePreset(int presetId, String name) async {
+    final trimmed = name.trim();
+    final updated = Map<int, String>.from(state);
+    if (trimmed.isEmpty) {
+      updated.remove(presetId);
+    } else {
+      updated[presetId] = trimmed;
+    }
+    state = updated;
+
+    final modelNumber = ref.read(activeProfileProvider).modelNumber;
+    await ref.read(profileStorageProvider).savePresetNames(modelNumber, updated);
+  }
+
+  /// Clears all custom preset button names in memory and local storage.
+  Future<void> clear() async {
+    state = const {};
+    final modelNumber = ref.read(activeProfileProvider).modelNumber;
+    await ref.read(profileStorageProvider).savePresetNames(modelNumber, const {});
+  }
+}
+
+/// Provider exposing user-customized preset button names keyed by preset ID.
+final presetNamesProvider =
+    NotifierProvider<PresetNamesNotifier, Map<int, String>>(
+  PresetNamesNotifier.new,
+);
+
+/// State notifier managing user-defined custom colors (ARGB ints) for preset buttons.
+class PresetColorsNotifier extends Notifier<Map<int, int>> {
+  @override
+  Map<int, int> build() {
+    final modelNumber =
+        ref.watch(activeProfileProvider.select((p) => p.modelNumber));
+    final storage = ref.watch(profileStorageProvider);
+
+    Future.microtask(() async {
+      final loaded = await storage.getPresetColors(modelNumber);
+      if (ref.mounted && loaded.isNotEmpty) {
+        state = loaded;
+      }
+    });
+
+    return const {};
+  }
+
+  /// Sets a custom ARGB color for [presetId], or pass `null` to reset to default.
+  Future<void> setPresetColor(int presetId, int? colorValue) async {
+    final updated = Map<int, int>.from(state);
+    if (colorValue == null) {
+      updated.remove(presetId);
+    } else {
+      updated[presetId] = colorValue;
+    }
+    state = updated;
+
+    final modelNumber = ref.read(activeProfileProvider).modelNumber;
+    await ref.read(profileStorageProvider).savePresetColors(modelNumber, updated);
+  }
+
+  /// Clears all custom preset button colors in memory and local storage.
+  Future<void> clear() async {
+    state = const {};
+    final modelNumber = ref.read(activeProfileProvider).modelNumber;
+    await ref.read(profileStorageProvider).savePresetColors(modelNumber, const {});
+  }
+}
+
+/// Provider exposing user-customized preset button ARGB colors keyed by preset ID.
+final presetColorsProvider =
+    NotifierProvider<PresetColorsNotifier, Map<int, int>>(
+  PresetColorsNotifier.new,
+);

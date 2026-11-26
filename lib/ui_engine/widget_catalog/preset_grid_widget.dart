@@ -7,8 +7,21 @@ import '../../core/protocol/protocol_providers.dart';
 import '../../core/protocol/telemetry_packet.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_tokens.dart';
+import '../../l10n/app_localizations.dart';
 
-/// Grid widget displaying tactile routine preset triggers with live progress sweeps.
+/// Curated push-button colors users can assign to each preset button.
+const List<Color> kPresetButtonPalette = [
+  AppColors.cyan,
+  Color(0xFF3B82F6), // Cobalt Blue
+  AppColors.purple,
+  AppColors.emerald,
+  AppColors.amber,
+  AppColors.crimson,
+  Color(0xFFEC4899), // Pink
+  Color(0xFFE2E8F0), // Silver
+];
+
+/// Grid widget displaying tactile square cards with round push buttons and custom colors.
 class PresetGridWidget extends ConsumerWidget {
   final AirWidgetConfig config;
 
@@ -18,6 +31,8 @@ class PresetGridWidget extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final columns = (config.props['columns'] as num?)?.toInt() ?? 2;
     final activeProfile = ref.watch(activeProfileProvider);
+    final customNames = ref.watch(presetNamesProvider);
+    final customColors = ref.watch(presetColorsProvider);
     final telemetryAsync = ref.watch(latestTelemetryProvider);
     final packet =
         telemetryAsync.value ?? ref.read(telemetryBusProvider).latestPacket;
@@ -37,33 +52,15 @@ class PresetGridWidget extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (config.title.isNotEmpty) ...[
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
+          Text(
+            AppLocalizations.of(context)?.presetButtonsTitle ??
                 config.title.toUpperCase(),
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.cyan,
-                  letterSpacing: 0.8,
-                ),
-              ),
-              TextButton.icon(
-                style: TextButton.styleFrom(
-                  visualDensity: VisualDensity.compact,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  foregroundColor: AppColors.crimson,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                ),
-                icon: const Icon(Icons.delete_sweep, size: 14),
-                label: const Text(
-                  'ERASE PRESETS',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                ),
-                onPressed: () => _confirmErasePresets(context, ref),
-              ),
-            ],
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: AppColors.of(context).cyan,
+              letterSpacing: 0.8,
+            ),
           ),
           const SizedBox(height: AppTokens.space8),
         ],
@@ -74,20 +71,34 @@ class PresetGridWidget extends ConsumerWidget {
             crossAxisCount: columns,
             crossAxisSpacing: AppTokens.space12,
             mainAxisSpacing: AppTokens.space12,
-            childAspectRatio: 1.4,
+            childAspectRatio: 1.0,
           ),
           itemCount: presets.length,
           itemBuilder: (context, index) {
             final preset = presets[index];
             final isActive = isRunning && (activeSlot == preset.id);
+            final customName = customNames[preset.id] ?? '';
+            final customColorValue = customColors[preset.id];
+            final buttonColor = customColorValue != null
+                ? Color(customColorValue)
+                : AppColors.of(context).cyan;
 
             return _PresetCard(
               preset: preset,
+              customName: customName,
+              buttonColor: buttonColor,
               isActive: isActive,
               isMachineBusy: isRunning && !isActive,
               progressPct: isActive ? progressPct : 0,
               currentStep: isActive ? currentStep : 0,
               totalSteps: isActive ? totalSteps : 0,
+              onCustomize: () => _showCustomizePresetDialog(
+                context,
+                ref,
+                preset,
+                customName,
+                customColorValue,
+              ),
               onTap: () async {
                 try {
                   if (isActive) {
@@ -109,207 +120,401 @@ class PresetGridWidget extends ConsumerWidget {
     );
   }
 
-  Future<void> _confirmErasePresets(BuildContext context, WidgetRef ref) async {
-    final confirmed = await showDialog<bool>(
+  Future<void> _showCustomizePresetDialog(
+    BuildContext context,
+    WidgetRef ref,
+    AirPreset preset,
+    String currentName,
+    int? currentColorValue,
+  ) async {
+    final result = await showDialog<_PresetCustomizationResult>(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: AppColors.surface,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppTokens.radiusLg),
-            side: const BorderSide(color: AppColors.border),
-          ),
-          title: const Row(
-            children: [
-              Icon(Icons.warning_amber_rounded, color: AppColors.amber, size: 24),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Erase All Presets in Firmware?',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
+      builder: (dialogContext) => _CustomizePresetDialog(
+        presetLabel: preset.label,
+        initialName: currentName,
+        initialColorValue: currentColorValue,
+      ),
+    );
+    if (result != null) {
+      await ref
+          .read(presetNamesProvider.notifier)
+          .renamePreset(preset.id, result.name);
+      await ref
+          .read(presetColorsProvider.notifier)
+          .setPresetColor(preset.id, result.colorValue);
+    }
+  }
+}
+
+class _PresetCustomizationResult {
+  final String name;
+  final int? colorValue;
+
+  const _PresetCustomizationResult({
+    required this.name,
+    required this.colorValue,
+  });
+}
+
+class _CustomizePresetDialog extends StatefulWidget {
+  final String presetLabel;
+  final String initialName;
+  final int? initialColorValue;
+
+  const _CustomizePresetDialog({
+    required this.presetLabel,
+    required this.initialName,
+    required this.initialColorValue,
+  });
+
+  @override
+  State<_CustomizePresetDialog> createState() => _CustomizePresetDialogState();
+}
+
+class _CustomizePresetDialogState extends State<_CustomizePresetDialog> {
+  late final TextEditingController _controller;
+  int? _selectedColorValue;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialName);
+    _selectedColorValue = widget.initialColorValue;
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: AppColors.of(context).surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTokens.radiusLg),
+        side: BorderSide(color: AppColors.of(context).border),
+      ),
+      title: Text(
+        AppLocalizations.of(context)?.customizePresetTitle(widget.presetLabel) ??
+            'Customize ${widget.presetLabel}',
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: _controller,
+              autofocus: true,
+              style: TextStyle(color: AppColors.of(context).textPrimary),
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(context)?.subtitleNameLabel ?? 'Subtitle Name',
+                hintText: AppLocalizations.of(context)?.subtitleNameHint ?? 'e.g. Quick Fold, Shirts, Custom...',
+                hintStyle: TextStyle(color: AppColors.of(context).textMuted),
+                border: const OutlineInputBorder(),
               ),
-            ],
-          ),
-          content: const Text(
-            'This will erase all custom routine sequences from memory and reset all button presets back to factory defaults.\n\nAre you sure you want to proceed?',
-            style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('CANCEL', style: TextStyle(color: AppColors.textSecondary)),
             ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.crimson,
-                foregroundColor: Colors.white,
+            const SizedBox(height: AppTokens.space16),
+            Text(
+              AppLocalizations.of(context)?.buttonColorLabel ?? 'Button Color',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: AppColors.of(context).textSecondary,
               ),
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('ERASE IN FIRMWARE'),
+            ),
+            const SizedBox(height: AppTokens.space8),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                for (final color in kPresetButtonPalette)
+                  _ColorSwatchOption(
+                    color: color,
+                    selected: _selectedColorValue == color.toARGB32() ||
+                        (_selectedColorValue == null &&
+                            color.toARGB32() == AppColors.of(context).cyan.toARGB32()),
+                    onTap: () {
+                      setState(() {
+                        _selectedColorValue = color.toARGB32();
+                      });
+                    },
+                  ),
+              ],
             ),
           ],
-        );
-      },
-    );
-
-    if (confirmed == true && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Restoring factory presets...'),
-          duration: Duration(seconds: 1),
         ),
-      );
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(
+            AppLocalizations.of(context)?.cancelButton ?? 'CANCEL',
+            style: TextStyle(color: AppColors.of(context).textSecondary),
+          ),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.of(context).cyan,
+            foregroundColor: AppColors.of(context).textOnAccent,
+          ),
+          onPressed: () => Navigator.of(context).pop(
+            _PresetCustomizationResult(
+              name: _controller.text,
+              colorValue: _selectedColorValue,
+            ),
+          ),
+          child: Text(AppLocalizations.of(context)?.saveButton ?? 'SAVE'),
+        ),
+      ],
+    );
+  }
+}
 
-      try {
-        await ref.read(commandPipelineProvider).restoreFactoryPresets();
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).hideCurrentSnackBar();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('All presets successfully erased and restored to factory defaults.'),
-              backgroundColor: AppColors.emerald,
-            ),
-          );
-        }
-      } catch (e) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).hideCurrentSnackBar();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to erase presets in firmware: $e'),
-              backgroundColor: AppColors.crimson,
-            ),
-          );
-        }
-      }
-    }
+class _ColorSwatchOption extends StatelessWidget {
+  final Color color;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _ColorSwatchOption({
+    required this.color,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final checkColor =
+        color.computeLuminance() > 0.5 ? Colors.black : Colors.white;
+    return InkWell(
+      onTap: onTap,
+      customBorder: const CircleBorder(),
+      child: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: color,
+          border: Border.all(
+            color: selected
+                ? AppColors.of(context).textPrimary
+                : Colors.transparent,
+            width: 2.5,
+          ),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.55),
+                    blurRadius: 8,
+                    spreadRadius: 1,
+                  ),
+                ]
+              : null,
+        ),
+        child: selected
+            ? Icon(Icons.check, size: 18, color: checkColor)
+            : null,
+      ),
+    );
   }
 }
 
 class _PresetCard extends StatelessWidget {
   final AirPreset preset;
+  final String customName;
+  final Color buttonColor;
   final bool isActive;
   final bool isMachineBusy;
   final int progressPct;
   final int currentStep;
   final int totalSteps;
+  final VoidCallback onCustomize;
   final VoidCallback onTap;
 
   const _PresetCard({
     required this.preset,
+    required this.customName,
+    required this.buttonColor,
     required this.isActive,
     required this.isMachineBusy,
     required this.progressPct,
     required this.currentStep,
     required this.totalSteps,
+    required this.onCustomize,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final borderColor = isActive
-        ? AppColors.cyan
-        : (isMachineBusy ? AppColors.border.withValues(alpha: 0.3) : AppColors.border);
+        ? buttonColor
+        : (isMachineBusy
+            ? AppColors.of(context).border.withValues(alpha: 0.3)
+            : AppColors.of(context).border);
+
+    final subtitle = customName.isNotEmpty ? customName : preset.description;
+    final effectiveButtonColor = isMachineBusy
+        ? buttonColor.withValues(alpha: 0.25)
+        : buttonColor;
+    final darkerShade =
+        Color.lerp(effectiveButtonColor, Colors.black, 0.32) ??
+            effectiveButtonColor;
+    final numberColor = isMachineBusy
+        ? AppColors.of(context).textMuted
+        : (effectiveButtonColor.computeLuminance() > 0.5
+            ? Colors.black
+            : Colors.white);
 
     return Material(
       color: isActive
-          ? AppColors.cyan.withValues(alpha: 0.12)
-          : AppColors.surface,
-      borderRadius: BorderRadius.circular(10),
+          ? buttonColor.withValues(alpha: 0.12)
+          : AppColors.of(context).surface,
+      borderRadius: BorderRadius.circular(14),
       child: InkWell(
         onTap: isMachineBusy ? null : onTap,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(14),
         child: Container(
           padding: const EdgeInsets.all(AppTokens.space12),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: borderColor,
               width: isActive ? 2 : 1,
             ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          child: Stack(
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Icon(
-                    _iconForName(preset.icon),
-                    color: isActive
-                        ? AppColors.cyan
-                        : (isMachineBusy
-                            ? AppColors.textMuted
-                            : AppColors.textPrimary),
-                    size: 24,
+              Positioned(
+                top: 0,
+                right: 0,
+                child: IconButton(
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(
+                    minWidth: 28,
+                    minHeight: 28,
                   ),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: isActive
-                          ? AppColors.cyan.withValues(alpha: 0.2)
-                          : AppColors.surfaceHighlight,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      '#${preset.id}',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color:
-                            isActive ? AppColors.cyan : AppColors.textSecondary,
+                  icon: Icon(
+                    Icons.edit_outlined,
+                    size: 16,
+                    color: AppColors.of(context).textSecondary,
+                  ),
+                  tooltip: AppLocalizations.of(context)?.customizePresetTitle(preset.label) ??
+                      'Customize ${preset.label}',
+                  onPressed: onCustomize,
+                ),
+              ),
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const SizedBox(height: 6),
+                  Expanded(
+                    child: Center(
+                      child: AspectRatio(
+                        aspectRatio: 1,
+                        child: Container(
+                          constraints: const BoxConstraints(
+                            maxWidth: 74,
+                            maxHeight: 74,
+                          ),
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppColors.of(context).surfaceHighlight,
+                            border: Border.all(
+                              color: isActive
+                                  ? buttonColor
+                                  : effectiveButtonColor.withValues(alpha: 0.45),
+                              width: isActive ? 2.5 : 1.5,
+                            ),
+                            boxShadow: isActive
+                                ? [
+                                    BoxShadow(
+                                      color: buttonColor.withValues(alpha: 0.45),
+                                      blurRadius: 12,
+                                      spreadRadius: 1,
+                                    ),
+                                  ]
+                                : null,
+                          ),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: RadialGradient(
+                                center: const Alignment(-0.25, -0.3),
+                                radius: 0.9,
+                                colors: [
+                                  effectiveButtonColor,
+                                  darkerShade,
+                                ],
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.4),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Center(
+                              child: Text(
+                                '${preset.id}',
+                                style: TextStyle(
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.w900,
+                                  color: numberColor,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ],
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    preset.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                      color: isMachineBusy
-                          ? AppColors.textMuted
-                          : AppColors.textPrimary,
-                    ),
-                  ),
+                  const SizedBox(height: 8),
                   if (isActive) ...[
-                    const SizedBox(height: 4),
                     ClipRRect(
                       borderRadius: BorderRadius.circular(2),
                       child: LinearProgressIndicator(
                         value: progressPct / 100.0,
-                        backgroundColor: AppColors.surfaceHighlight,
-                        valueColor: const AlwaysStoppedAnimation<Color>(
-                            AppColors.cyan),
+                        backgroundColor: AppColors.of(context).surfaceHighlight,
+                        valueColor:
+                            AlwaysStoppedAnimation<Color>(buttonColor),
                         minHeight: 4,
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 4),
                     Text(
-                      'Step $currentStep/$totalSteps ($progressPct%)',
-                      style: const TextStyle(
-                        fontSize: 9,
+                      AppLocalizations.of(context)?.stepProgressLabel(
+                            currentStep,
+                            totalSteps,
+                            progressPct,
+                          ) ??
+                          'Step $currentStep/$totalSteps ($progressPct%)',
+                      style: TextStyle(
+                        fontSize: 10,
                         fontFamily: 'monospace',
-                        color: AppColors.cyan,
+                        fontWeight: FontWeight.w600,
+                        color: buttonColor,
                       ),
                     ),
-                  ] else if (preset.description.isNotEmpty) ...[
+                  ] else if (subtitle.isNotEmpty) ...[
                     Text(
-                      preset.description,
-                      maxLines: 1,
+                      subtitle,
+                      maxLines: 2,
+                      textAlign: TextAlign.center,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 10,
-                        color: AppColors.textSecondary,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        height: 1.15,
+                        color: isMachineBusy
+                            ? AppColors.of(context).textMuted
+                            : AppColors.of(context).textPrimary,
                       ),
                     ),
                   ],
@@ -320,23 +525,5 @@ class _PresetCard extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  IconData _iconForName(String icon) {
-    switch (icon.toLowerCase()) {
-      case 'tshirt':
-      case 'shirt':
-        return Icons.dry_cleaning;
-      case 'sweater':
-        return Icons.checkroom;
-      case 'pants':
-      case 'trousers':
-        return Icons.view_column;
-      case 'towel':
-      case 'towels':
-        return Icons.layers;
-      default:
-        return Icons.play_circle_outline;
-    }
   }
 }

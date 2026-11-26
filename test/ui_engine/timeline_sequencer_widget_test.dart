@@ -1,10 +1,19 @@
+import 'dart:io';
+
 import 'package:air_robotics_app/core/ble/ble_providers.dart';
+import 'package:air_robotics_app/core/ble/ble_transport_interface.dart';
 import 'package:air_robotics_app/core/profile/device_profile.dart';
+import 'package:air_robotics_app/core/profile/profile_providers.dart';
+import 'package:air_robotics_app/core/profile/profile_storage_service.dart';
+import 'package:air_robotics_app/core/profile/profile_validator.dart';
 import 'package:air_robotics_app/core/protocol/command_builder.dart';
 import 'package:air_robotics_app/core/protocol/command_pipeline.dart';
 import 'package:air_robotics_app/core/protocol/protocol_providers.dart';
 import 'package:air_robotics_app/core/protocol/routine_models.dart';
+import 'package:air_robotics_app/core/theme/app_colors.dart';
 import 'package:air_robotics_app/ui_engine/widget_catalog/timeline_sequencer_widget.dart';
+import 'package:air_robotics_app/visualizers/fabrica/fabrica_arrangement_provider.dart';
+import 'package:air_robotics_app/visualizers/fabrica/sequencer_programming_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -14,25 +23,53 @@ import '../mocks/mock_ble_transport.dart';
 void main() {
   group('TimelineSequencerWidget Tests', () {
     late MockBleTransport mockTransport;
+    late DeviceProfile fabricaProfile;
 
     setUp(() {
       mockTransport = MockBleTransport();
+      final schemaStr =
+          File('assets/profiles/air-device-profile.schema.json')
+              .readAsStringSync();
+      final profileStr =
+          File('assets/profiles/fabrica-devkit-v1.json').readAsStringSync();
+      fabricaProfile = ProfileValidator.validateStrings(
+        schemaString: schemaStr,
+        profileString: profileStr,
+      );
     });
 
     tearDown(() {
       mockTransport.dispose();
     });
 
-    Widget createTestWidget({AirWidgetConfig? config}) {
+    ProviderContainer createContainer({
+      bool selectFabricaProfile = true,
+      List<dynamic> extraOverrides = const [],
+    }) {
       final container = ProviderContainer(
         overrides: [
           bleTransportProvider.overrideWithValue(mockTransport),
+          profileStorageProvider.overrideWithValue(
+            InMemoryProfileStorageService(),
+          ),
           commandPipelineProvider.overrideWithValue(
             CommandPipeline(transport: mockTransport, telemetryBus: null),
           ),
+          ...extraOverrides.cast(),
         ],
       );
+      if (selectFabricaProfile) {
+        container
+            .read(activeProfileProvider.notifier)
+            .selectProfile(fabricaProfile);
+      }
+      return container;
+    }
 
+    Widget createTestWidget({
+      AirWidgetConfig? config,
+      required ProviderContainer container,
+    }) {
       return UncontrolledProviderScope(
         container: container,
         child: MaterialApp(
@@ -51,123 +88,445 @@ void main() {
       );
     }
 
-    testWidgets('renders initial 3 steps and operation buttons',
+    testWidgets(
+        'renders 1x4 button row matching Control names/colors, loads Button 1 by default, and shows 1-tap Save button',
         (tester) async {
-      await tester.binding.setSurfaceSize(const Size(600, 900));
+      await tester.binding.setSurfaceSize(const Size(400, 900));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
-      await tester.pumpWidget(createTestWidget());
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      await container
+          .read(presetNamesProvider.notifier)
+          .renamePreset(2, 'Work Shirts');
+      await container
+          .read(presetColorsProvider.notifier)
+          .setPresetColor(2, AppColors.emerald.toARGB32());
+
+      await tester.pumpWidget(createTestWidget(container: container));
       await tester.pumpAndSettle();
 
       expect(find.text('FOLDING TIMELINE'), findsOneWidget);
-      expect(find.text('Left Flap (Ch 0)'), findsOneWidget);
-      expect(find.text('Right Flap (Ch 1)'), findsOneWidget);
-      expect(find.text('Bottom Flap (Ch 2)'), findsOneWidget);
-      expect(find.text('ADD MOTION STEP (3/16)'), findsOneWidget);
+
+      // 4 compact button tiles with numbers, names, and custom name
+      for (int slot = 1; slot <= 4; slot++) {
+        expect(find.byKey(Key('sequencer_button_$slot')), findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byKey(Key('sequencer_button_$slot')),
+            matching: find.text('$slot'),
+          ),
+          findsOneWidget,
+        );
+      }
+      expect(find.text('Adult T-Shirt'), findsOneWidget);
+      expect(find.text('Work Shirts'), findsOneWidget);
+      expect(find.text('Trousers'), findsOneWidget);
+      expect(find.text('Towels'), findsOneWidget);
+
+      // All 4 buttons are arranged horizontally in one row (same top y)
+      final y1 = tester.getTopLeft(find.byKey(const Key('sequencer_button_1'))).dy;
+      final y4 = tester.getTopLeft(find.byKey(const Key('sequencer_button_4'))).dy;
+      expect(y1, equals(y4));
+
+      // Button 1 timeline loaded by default (4 factory steps)
+      expect(container.read(sequencerProgrammingProvider).selectedButtonId, 1);
+      expect(container.read(sequencerProgrammingProvider).isDirty, isFalse);
+      expect(find.text('Module #1 • Channel 1'), findsOneWidget);
+      expect(find.text('Module #7 • Channel 2'), findsOneWidget);
+      expect(find.text('Module #6 • Channel 3'), findsOneWidget);
+      expect(find.text('Module #12 • Channel 4'), findsOneWidget);
+      expect(find.text('ADD STEP (4/16)'), findsOneWidget);
+
+      // Bottom action buttons
       expect(find.text('PREVIEW ON ROBOT'), findsOneWidget);
-      expect(find.text('SAVE TO BUTTON'), findsOneWidget);
-      expect(find.text('SYNC FROM ROBOT'), findsOneWidget);
-      expect(find.text('RESTORE FACTORY PRESETS'), findsOneWidget);
+      expect(find.text('SAVE TO BUTTON 1'), findsOneWidget);
+      expect(find.text('UNSAVED'), findsNothing);
     });
 
-    testWidgets('loads pre-defined routine templates correctly',
+    testWidgets(
+        'clicking another button when clean loads its timeline and updates Save button label/color',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(400, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      await container
+          .read(presetColorsProvider.notifier)
+          .setPresetColor(2, AppColors.emerald.toARGB32());
+
+      await tester.pumpWidget(createTestWidget(container: container));
+      await tester.pumpAndSettle();
+
+      // Tap Button 2 (Long Sleeve: 5 factory steps starting with dual [0,1])
+      await tester.tap(find.byKey(const Key('sequencer_button_2')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Unsaved Changes'), findsNothing);
+      expect(container.read(sequencerProgrammingProvider).selectedButtonId, 2);
+      expect(container.read(sequencerProgrammingProvider).isDirty, isFalse);
+      expect(find.text('ADD STEP (5/16)'), findsOneWidget);
+      expect(find.text('DUAL'), findsOneWidget);
+      expect(find.text('SAVE TO BUTTON 2'), findsOneWidget);
+
+      // Tap Button 3 (Trousers: 3 factory steps)
+      await tester.tap(find.byKey(const Key('sequencer_button_3')));
+      await tester.pumpAndSettle();
+
+      expect(container.read(sequencerProgrammingProvider).selectedButtonId, 3);
+      expect(find.text('ADD STEP (3/16)'), findsOneWidget);
+      expect(find.text('SAVE TO BUTTON 3'), findsOneWidget);
+    });
+
+    testWidgets(
+        '3-dot menu shows only preset templates and loads template onto selected button as unsaved',
         (tester) async {
       await tester.binding.setSurfaceSize(const Size(600, 900));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
-      await tester.pumpWidget(createTestWidget());
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(createTestWidget(container: container));
       await tester.pumpAndSettle();
 
-      // Open popup menu
+      // Select Button 2 first
+      await tester.tap(find.byKey(const Key('sequencer_button_2')));
+      await tester.pumpAndSettle();
+
+      // Open 3-dot template menu: should contain templates, NOT Button 1..4
       await tester.tap(find.byTooltip('Load Template'));
       await tester.pumpAndSettle();
 
-      // Select Long Sleeve Template
-      await tester.tap(find.text('Long Sleeve Template'));
-      await tester.pumpAndSettle();
+      expect(find.text('Adult T-Shirt Template'), findsOneWidget);
+      expect(find.text('Long Sleeve Template'), findsOneWidget);
+      expect(find.text('Dual Sweep Template'), findsOneWidget);
+      expect(find.textContaining('Button 1'), findsNothing);
 
-      expect(find.text('Top Flap (Ch 3)'), findsOneWidget);
-      expect(find.text('ADD MOTION STEP (4/16)'), findsOneWidget);
-
-      // Open popup menu and select Dual Sweep
-      await tester.tap(find.byTooltip('Load Template'));
-      await tester.pumpAndSettle();
-
+      // Select Dual Sweep Template -> applies to Button 2 and marks unsaved
       await tester.tap(find.text('Dual Sweep Template'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Left Flap (Ch 0) + Right Flap (Ch 1)'), findsOneWidget);
+      final seq = container.read(sequencerProgrammingProvider);
+      expect(seq.selectedButtonId, equals(2));
+      expect(seq.isDirty, isTrue);
+      expect(
+        seq.draftSteps,
+        equals([
+          [0, 1],
+          [2],
+        ]),
+      );
       expect(find.text('DUAL'), findsOneWidget);
-      expect(find.text('ADD MOTION STEP (2/16)'), findsOneWidget);
+      expect(find.text('ADD STEP (2/16)'), findsOneWidget);
+      expect(find.text('UNSAVED'), findsOneWidget);
+      expect(
+        find.text('Loaded Dual Sweep Template into Button 2'),
+        findsOneWidget,
+      );
+      // Should NOT auto-save to robot
+      expect(mockTransport.writtenControlPointPayloads, isEmpty);
+    });
 
-      // Open popup menu and select Adult T-Shirt Template (lines 77-80)
+    testWidgets(
+        '1-tap SAVE TO BUTTON N directly writes opcode 0x0A for selected slot and persists routine',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(600, 1000));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(createTestWidget(container: container));
+      await tester.pumpAndSettle();
+
+      // Select Button 2 and load Dual Sweep Template
+      await tester.tap(find.byKey(const Key('sequencer_button_2')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Load Template'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Dual Sweep Template'));
+      await tester.pumpAndSettle();
+
+      expect(container.read(sequencerProgrammingProvider).isDirty, isTrue);
+
+      // Tap SAVE TO BUTTON 2 -> direct 1-tap write, no modal dialog
+      final saveBtn = find.text('SAVE TO BUTTON 2');
+      await tester.ensureVisible(saveBtn);
+      await tester.tap(saveBtn);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Save Routine to Robot'), findsNothing);
+      final payloads = mockTransport.writtenControlPointPayloads;
+      expect(payloads.length, equals(1));
+      expect(payloads.first[0], BleOpcode.setButtonSequence.value); // 0x0A
+      expect(payloads.first[1], 2); // Slot 2
+      expect(payloads.first.length, 2 + FoldRoutine.binaryLength); // 55 bytes
+
+      expect(find.text('Saved successfully to Button 2'), findsOneWidget);
+      expect(container.read(sequencerProgrammingProvider).isDirty, isFalse);
+      expect(find.text('UNSAVED'), findsNothing);
+
+      // Switch to Button 1 and back to Button 2 -> loads saved 2-step routine
+      await tester.tap(find.byKey(const Key('sequencer_button_1')));
+      await tester.pumpAndSettle();
+      expect(find.text('ADD STEP (4/16)'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('sequencer_button_2')));
+      await tester.pumpAndSettle();
+      expect(
+        container.read(sequencerProgrammingProvider).draftSteps,
+        equals([
+          [0, 1],
+          [2],
+        ]),
+      );
+      expect(find.text('ADD STEP (2/16)'), findsOneWidget);
+    });
+
+    testWidgets(
+        'switching buttons with unsaved changes prompts Cancel, Discard, and Save & Switch',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(600, 1000));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(createTestWidget(container: container));
+      await tester.pumpAndSettle();
+
+      // Modify Button 1 by loading Dual Sweep Template (2 steps)
+      await tester.tap(find.byTooltip('Load Template'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Dual Sweep Template'));
+      await tester.pumpAndSettle();
+      expect(container.read(sequencerProgrammingProvider).isDirty, isTrue);
+
+      // 1. Tap Button 2 -> dialog appears -> tap CANCEL -> stays on Button 1 with edits
+      await tester.tap(find.byKey(const Key('sequencer_button_2')));
+      await tester.pumpAndSettle();
+      expect(find.text('Unsaved Changes'), findsOneWidget);
+      await tester.tap(find.text('CANCEL'));
+      await tester.pumpAndSettle();
+
+      expect(container.read(sequencerProgrammingProvider).selectedButtonId, 1);
+      expect(container.read(sequencerProgrammingProvider).isDirty, isTrue);
+      expect(find.text('ADD STEP (2/16)'), findsOneWidget);
+
+      // 2. Tap Button 2 -> tap DISCARD -> switches to Button 2 without saving Button 1
+      await tester.tap(find.byKey(const Key('sequencer_button_2')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('DISCARD'));
+      await tester.pumpAndSettle();
+
+      expect(mockTransport.writtenControlPointPayloads, isEmpty);
+      expect(container.read(sequencerProgrammingProvider).selectedButtonId, 2);
+      expect(container.read(sequencerProgrammingProvider).isDirty, isFalse);
+      expect(find.text('ADD STEP (5/16)'), findsOneWidget);
+
+      // 3. Modify Button 2 (load Adult T-Shirt Template -> 3 steps), then tap Button 3 -> SAVE & SWITCH
       await tester.tap(find.byTooltip('Load Template'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Adult T-Shirt Template'));
       await tester.pumpAndSettle();
-      expect(find.text('ADD MOTION STEP (3/16)'), findsOneWidget);
+      expect(container.read(sequencerProgrammingProvider).isDirty, isTrue);
+
+      await tester.tap(find.byKey(const Key('sequencer_button_3')));
+      await tester.pumpAndSettle();
+      expect(find.text('Unsaved Changes'), findsOneWidget);
+      await tester.tap(find.text('SAVE & SWITCH'));
+      await tester.pumpAndSettle();
+
+      // Saved Button 2 (opcode 0x0A, slot 2) and switched to Button 3
+      expect(mockTransport.writtenControlPointPayloads.length, equals(1));
+      expect(
+        mockTransport.writtenControlPointPayloads.first[0],
+        BleOpcode.setButtonSequence.value,
+      );
+      expect(mockTransport.writtenControlPointPayloads.first[1], equals(2));
+      expect(container.read(sequencerProgrammingProvider).selectedButtonId, 3);
+      expect(container.read(sequencerProgrammingProvider).isDirty, isFalse);
+
+      // Switching back to Button 2 reflects the newly saved 3-step routine
+      await tester.tap(find.byKey(const Key('sequencer_button_2')));
+      await tester.pumpAndSettle();
+      expect(
+        container.read(sequencerProgrammingProvider).draftSteps,
+        equals([
+          [0],
+          [1],
+          [2],
+        ]),
+      );
     });
 
-    testWidgets('adds a motion step and respects routine bounds',
+    testWidgets(
+        'SAVE & SWITCH stays on current button if validation fails or BLE write fails',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(600, 1000));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(createTestWidget(container: container));
+      await tester.pumpAndSettle();
+
+      // Add an empty (invalid) step on Button 1
+      await tester.tap(find.text('ADD STEP (4/16)'));
+      await tester.pumpAndSettle();
+
+      // Try SAVE & SWITCH -> validation should keep user on Button 1
+      await tester.tap(find.byKey(const Key('sequencer_button_2')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('SAVE & SWITCH'));
+      await tester.pumpAndSettle();
+
+      expect(container.read(sequencerProgrammingProvider).selectedButtonId, 1);
+      expect(
+        find.text('Step 5 must have at least 1 motorized panel.'),
+        findsOneWidget,
+      );
+      expect(mockTransport.writtenControlPointPayloads, isEmpty);
+
+      // Remove empty step, remove another step so routine is valid & dirty, then fail BLE write
+      await tester.tap(find.byTooltip('Remove Step').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Remove Step').last);
+      await tester.pumpAndSettle();
+      expect(container.read(sequencerProgrammingProvider).isDirty, isTrue);
+
+      mockTransport.failNextWrite = true;
+      await tester.tap(find.byKey(const Key('sequencer_button_2')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('SAVE & SWITCH'));
+      await tester.pumpAndSettle();
+
+      expect(container.read(sequencerProgrammingProvider).selectedButtonId, 1);
+      expect(container.read(sequencerProgrammingProvider).isDirty, isTrue);
+      expect(find.textContaining('Failed to save to robot:'), findsOneWidget);
+    });
+
+    testWidgets('hydrates Button 1 from live FAB3 buttonConfigProvider on open',
         (tester) async {
       await tester.binding.setSurfaceSize(const Size(600, 900));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
-      await tester.pumpWidget(createTestWidget());
+      final table = ButtonConfigTable(
+        routines: {
+          1: FoldRoutine.fromSteps([FoldStep.dual(0, 1), FoldStep.single(3)]),
+          2: FoldRoutine.fromSteps([FoldStep.single(2)]),
+          3: FoldRoutine.fromSteps([FoldStep.single(0), FoldStep.single(1)]),
+          4: FoldRoutine.fromSteps([FoldStep.single(3)]),
+        },
+      );
+
+      final container = createContainer(
+        extraOverrides: [
+          bleConnectionStateProvider.overrideWith(
+            (ref) => Stream.value(BleConnectionState.ready),
+          ),
+          buttonConfigProvider.overrideWith(
+            (ref) => Stream.value(table),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(createTestWidget(container: container));
       await tester.pumpAndSettle();
 
-      // Tap Add Motion Step
-      await tester.tap(find.text('ADD MOTION STEP (3/16)'));
+      // Button 1 hydrated from live FAB3 table
+      expect(container.read(sequencerProgrammingProvider).selectedButtonId, 1);
+      expect(
+        container.read(sequencerProgrammingProvider).draftSteps,
+        equals([
+          [0, 1],
+          [3],
+        ]),
+      );
+      expect(container.read(sequencerProgrammingProvider).isDirty, isFalse);
+
+      // Switching to Button 2 loads its live FAB3 routine
+      await tester.tap(find.byKey(const Key('sequencer_button_2')));
       await tester.pumpAndSettle();
-
-      expect(find.text('Add Motion Step'), findsOneWidget);
-
-      // Tap ADD button in dialog
-      await tester.tap(find.text('ADD'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('ADD MOTION STEP (4/16)'), findsOneWidget);
-
-      // Remove step using trailing IconButton
-      final removeButtons = find.byTooltip('Remove Step');
-      expect(removeButtons, findsNWidgets(4));
-
-      await tester.tap(removeButtons.last);
-      await tester.pumpAndSettle();
-
-      expect(find.text('ADD MOTION STEP (3/16)'), findsOneWidget);
+      expect(
+        container.read(sequencerProgrammingProvider).draftSteps,
+        equals([
+          [2],
+        ]),
+      );
     });
 
-    testWidgets('prevents removing all steps below minimum of 1',
+    testWidgets(
+        'adds an empty step, validates at least 1 motor, and respects min/max bounds',
         (tester) async {
-      await tester.binding.setSurfaceSize(const Size(600, 900));
+      await tester.binding.setSurfaceSize(const Size(600, 2500));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
-      await tester.pumpWidget(createTestWidget());
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(createTestWidget(container: container));
       await tester.pumpAndSettle();
 
-      // Remove 2 steps so 1 remains
+      // Tap large ADD STEP button -> adds empty Step 5
+      await tester.tap(find.text('ADD STEP (4/16)'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('ADD STEP (5/16)'), findsOneWidget);
+      expect(find.text('Tap 1–2 motor panels on grid'), findsOneWidget);
+
+      // Validation blocks PREVIEW ON ROBOT when a step has 0 motorized panels
+      await tester.tap(find.text('PREVIEW ON ROBOT'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Step 5 must have at least 1 motorized panel.'),
+        findsOneWidget,
+      );
+      expect(mockTransport.writtenControlPointPayloads, isEmpty);
+
+      // Remove empty step -> back to 4 steps
+      await tester.tap(find.byTooltip('Remove Step').last);
+      await tester.pumpAndSettle();
+      expect(find.text('ADD STEP (4/16)'), findsOneWidget);
+
+      // Fill up to 16 steps
+      for (var i = 0; i < 12; i++) {
+        final btn = find.textContaining('ADD STEP');
+        await tester.ensureVisible(btn);
+        await tester.tap(btn);
+        await tester.pumpAndSettle();
+      }
+      expect(find.text('ROUTINE FULL (16/16 STEPS)'), findsOneWidget);
+
+      // Remove down to 1 step and check minimum bound
+      for (var i = 0; i < 15; i++) {
+        await tester.tap(find.byTooltip('Remove Step').last);
+        await tester.pumpAndSettle();
+      }
+      expect(find.text('ADD STEP (1/16)'), findsOneWidget);
+
       await tester.tap(find.byTooltip('Remove Step').first);
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Remove Step').first);
-      await tester.pumpAndSettle();
-
-      expect(find.text('ADD MOTION STEP (1/16)'), findsOneWidget);
-
-      // Try to remove the last step
-      await tester.tap(find.byTooltip('Remove Step').first);
-      await tester.pumpAndSettle();
-
       expect(find.text('Routine must contain at least 1 step'), findsOneWidget);
-      expect(find.text('ADD MOTION STEP (1/16)'), findsOneWidget);
+      expect(find.text('ADD STEP (1/16)'), findsOneWidget);
     });
 
-    testWidgets('PREVIEW ON ROBOT dispatches opcode 0x01 with valid FoldRoutine payload',
+    testWidgets(
+        'PREVIEW ON ROBOT dispatches opcode 0x01 and surfaces dispatch errors',
         (tester) async {
-      await tester.binding.setSurfaceSize(const Size(600, 900));
+      await tester.binding.setSurfaceSize(const Size(600, 1000));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
-      await tester.pumpWidget(createTestWidget());
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(createTestWidget(container: container));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('PREVIEW ON ROBOT'));
@@ -175,194 +534,50 @@ void main() {
 
       final payloads = mockTransport.writtenControlPointPayloads;
       expect(payloads.isNotEmpty, isTrue);
-
-      final previewPacket = payloads.first;
-      expect(previewPacket[0], BleOpcode.runRawSequence.value); // 0x01
-      expect(previewPacket.length, 1 + FoldRoutine.binaryLength); // 54 bytes
+      expect(payloads.first[0], BleOpcode.runRawSequence.value); // 0x01
+      expect(payloads.first.length, 1 + FoldRoutine.binaryLength); // 54 bytes
       expect(find.textContaining('Preview running on robot'), findsOneWidget);
-    });
 
-    testWidgets('SAVE TO BUTTON selects slot and writes opcode 0x0A with CRC32',
-        (tester) async {
-      await tester.binding.setSurfaceSize(const Size(600, 900));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-
-      await tester.pumpWidget(createTestWidget());
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('SAVE TO BUTTON'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Program Hardware Preset Button'), findsOneWidget);
-      expect(find.text('Button 2'), findsOneWidget);
-
-      // Select Button 2
-      await tester.tap(find.text('Button 2'));
-      await tester.pumpAndSettle();
-
-      // Confirm
-      await tester.tap(find.text('COMMIT TO FLASH'));
-      await tester.pumpAndSettle();
-
-      final payloads = mockTransport.writtenControlPointPayloads;
-      expect(payloads.isNotEmpty, isTrue);
-
-      final savePacket = payloads.first;
-      expect(savePacket[0], BleOpcode.setButtonSequence.value); // 0x0A
-      expect(savePacket[1], 2); // Slot 2
-      expect(savePacket.length, 2 + FoldRoutine.binaryLength); // 55 bytes
-      expect(find.textContaining('Saved successfully to Button 2'), findsOneWidget);
-    });
-
-    testWidgets('RESTORE FACTORY PRESETS confirmation dispatches opcode 0x0C',
-        (tester) async {
-      await tester.binding.setSurfaceSize(const Size(600, 900));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-
-      await tester.pumpWidget(createTestWidget());
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('RESTORE FACTORY PRESETS'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Restore Factory Presets?'), findsOneWidget);
-
-      await tester.tap(find.text('RESTORE DEFAULTS'));
-      await tester.pumpAndSettle();
-
-      final payloads = mockTransport.writtenControlPointPayloads;
-      expect(payloads.isNotEmpty, isTrue);
-
-      final restorePacket = payloads.first;
-      expect(restorePacket[0], BleOpcode.restoreFactoryPresets.value); // 0x0C
-      expect(restorePacket.length, 1);
-      expect(find.textContaining('Factory presets restored successfully'),
-          findsOneWidget);
-    });
-
-    testWidgets('sync from robot dispatches 0x0B opcode to request FAB3 push',
-        (tester) async {
-      await tester.binding.setSurfaceSize(const Size(600, 900));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-
-      await tester.pumpWidget(createTestWidget());
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('SYNC FROM ROBOT'));
-      await tester.pumpAndSettle();
-
-      final payloads = mockTransport.writtenControlPointPayloads;
-      expect(payloads.isNotEmpty, isTrue);
-      expect(payloads.first, equals([0x0B]));
-      expect(find.textContaining('Routines synchronized successfully'), findsOneWidget);
-    });
-
-    testWidgets('cancels restore and flash dialogs and adds dual step', (tester) async {
-      await tester.binding.setSurfaceSize(const Size(600, 2500));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-
-      await tester.pumpWidget(createTestWidget());
-      await tester.pumpAndSettle();
-
-      // 1. Cancel restore dialog
-      final restoreBtn = find.text('RESTORE FACTORY PRESETS');
-      await tester.ensureVisible(restoreBtn);
-      await tester.tap(restoreBtn);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('CANCEL'));
-      await tester.pumpAndSettle();
-
-      // 2. Cancel flash dialog
-      final saveBtn = find.text('SAVE TO BUTTON');
-      await tester.ensureVisible(saveBtn);
-      await tester.tap(saveBtn);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('CANCEL'));
-      await tester.pumpAndSettle();
-
-      // 3. Add step dialog with dropdown selection, dual flap and cancel
-      final addStepBtn = find.textContaining('ADD MOTION STEP');
-      await tester.ensureVisible(addStepBtn);
-      await tester.tap(addStepBtn);
-      await tester.pumpAndSettle();
-
-      // Change flap 1 dropdown (lines 291-292)
-      await tester.tap(find.byType(DropdownButtonFormField<int>).first);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Right Flap (Ch 1)').last);
-      await tester.pumpAndSettle();
-
-      final dualCheckbox = find.byType(CheckboxListTile);
-      await tester.tap(dualCheckbox);
-      await tester.pumpAndSettle();
-
-      // Change flap 2 dropdown (lines 321-322)
-      await tester.tap(find.byType(DropdownButtonFormField<int>).last);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Bottom Flap (Ch 2)').last);
-      await tester.pumpAndSettle();
-
-      // Cancel add dialog (line 329)
-      await tester.tap(find.text('CANCEL'));
-      await tester.pumpAndSettle();
-
-      // Re-open and add dual step (lines 56-57)
-      await tester.ensureVisible(find.textContaining('ADD MOTION STEP'));
-      await tester.tap(find.textContaining('ADD MOTION STEP'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byType(CheckboxListTile));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byType(DropdownButtonFormField<int>).last);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Bottom Flap (Ch 2)').last);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('ADD'));
-      await tester.pumpAndSettle();
-
-      // 4. Fill up to 16 steps
-      for (var i = 0; i < 12; i++) {
-        final btn = find.textContaining('ADD MOTION STEP');
-        await tester.ensureVisible(btn);
-        await tester.tap(btn);
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('ADD'));
-        await tester.pumpAndSettle();
-      }
-      expect(find.text('ROUTINE FULL (16/16 STEPS)'), findsOneWidget);
-
-      // 5. Preview error (line 115)
+      // Preview error
       mockTransport.failNextWrite = true;
-      final previewBtn = find.text('PREVIEW ON ROBOT');
-      await tester.ensureVisible(previewBtn);
-      await tester.tap(previewBtn);
+      await tester.tap(find.text('PREVIEW ON ROBOT'));
       await tester.pumpAndSettle();
       expect(find.textContaining('Preview dispatch error:'), findsOneWidget);
 
-      // 6. Flash commit error (line 201)
+      // Direct save error
       mockTransport.failNextWrite = true;
-      await tester.ensureVisible(saveBtn);
-      await tester.tap(saveBtn);
+      await tester.tap(find.text('SAVE TO BUTTON 1'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('COMMIT TO FLASH'));
-      await tester.pumpAndSettle();
-      expect(find.textContaining('Flash commit error:'), findsOneWidget);
+      expect(find.textContaining('Failed to save to robot:'), findsOneWidget);
+    });
 
-      // 7. Restore factory presets error (line 244)
-      mockTransport.failNextWrite = true;
-      await tester.ensureVisible(restoreBtn);
-      await tester.tap(restoreBtn);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('RESTORE DEFAULTS'));
-      await tester.pumpAndSettle();
-      expect(find.textContaining('Restore error:'), findsOneWidget);
+    testWidgets('requires at least one motorized module from arrangement',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(600, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
 
-      // 8. Sync error (line 260)
-      mockTransport.failNextWrite = true;
-      final syncBtn = find.text('SYNC FROM ROBOT');
-      await tester.ensureVisible(syncBtn);
-      await tester.tap(syncBtn);
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      // Remove all motorized modules from arrangement
+      final arrNotifier = container.read(fabricaArrangementProvider.notifier);
+      for (final id in [1, 6, 7, 8, 11, 12]) {
+        arrNotifier.removePanel(id);
+      }
+
+      await tester.pumpWidget(createTestWidget(container: container));
       await tester.pumpAndSettle();
-      expect(find.textContaining('Sync error:'), findsOneWidget);
+
+      expect(
+        find.text(
+          'Routine requires at least one Motorized module from Fabrica Arrangement.',
+        ),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('PREVIEW ON ROBOT'));
+      await tester.pumpAndSettle();
+      expect(mockTransport.writtenControlPointPayloads, isEmpty);
     });
   });
 }

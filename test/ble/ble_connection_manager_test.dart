@@ -178,6 +178,40 @@ void main() {
       expect(container.read(isViewingDeviceProvider), isFalse);
     });
 
+    test('ViewingDeviceNotifier does not auto-open device page when BLE becomes ready in background', () async {
+      final mockTransport = MockBleTransport();
+      final container = ProviderContainer(
+        overrides: [
+          bleTransportProvider.overrideWithValue(mockTransport),
+        ],
+      );
+      addTearDown(() {
+        container.dispose();
+        mockTransport.dispose();
+      });
+
+      expect(container.read(isViewingDeviceProvider), isFalse);
+
+      final robot = DiscoveredRobot(
+        id: 'bg_1',
+        name: 'Fabrica-BG',
+        rawRssi: -55,
+        smoothedRssi: -55.0,
+        isPairingMode: false,
+        lastSeen: DateTime.now(),
+      );
+
+      await container.read(bleConnectionManagerProvider).connect(robot);
+      await pumpEventQueue();
+
+      expect(
+        container.read(bleConnectionManagerProvider).currentState,
+        equals(BleConnectionState.ready),
+      );
+      // Must stay false until user explicitly taps/opens the device
+      expect(container.read(isViewingDeviceProvider), isFalse);
+    });
+
     test('auto-reconnect timer triggers connect on target robot and handles manualDisconnect', () {
       fakeAsync((async) {
         final robot = DiscoveredRobot(

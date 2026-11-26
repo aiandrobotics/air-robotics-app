@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-13
+- Applied distinct high-tech Cyan theme to already added/paired robots, visually distinguishing them from green discovered candidate robots.
+- Made the full paired robot record clickable across the entire card area on the landing dashboard to directly open or connect.
+- Removed three-dotted menu button from the landing dashboard robot cards to streamline home interface.
+- Moved device management options (Rename Robot, Disconnect, Unpair Robot, Full Factory Reset) inside the device details page overflow menu.
+
 ## 2026-11-12
 - Standardized robot hardware model labeling from "Fabrica-DevKit-v1" to "Fabrica" across all UI screens, models, and fallback resolvers.
 - Updated pairing instructions across Add Device Catalog and Pair Robot screens to specify pressing and holding any button on the Fabrica control panel for 3 seconds.

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:air_robotics_app/core/ble/ble_providers.dart';
 import 'package:air_robotics_app/core/profile/device_profile.dart';
 import 'package:air_robotics_app/core/profile/profile_providers.dart';
+import 'package:air_robotics_app/core/profile/profile_storage_service.dart';
 import 'package:air_robotics_app/core/profile/profile_validator.dart';
 import 'package:air_robotics_app/core/protocol/command_pipeline.dart';
 import 'package:air_robotics_app/core/protocol/protocol_providers.dart';
@@ -66,6 +67,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           bleTransportProvider.overrideWithValue(mockTransport),
+          profileStorageProvider.overrideWithValue(InMemoryProfileStorageService()),
           commandPipelineProvider.overrideWithValue(
             CommandPipeline(transport: mockTransport),
           ),
@@ -99,13 +101,17 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      expect(find.text('1'), findsOneWidget);
+      expect(find.text('2'), findsOneWidget);
+      expect(find.text('3'), findsOneWidget);
+      expect(find.text('4'), findsOneWidget);
       expect(find.text('Adult T-Shirt'), findsOneWidget);
       expect(find.text('Long Sleeve'), findsOneWidget);
       expect(find.text('Trousers'), findsOneWidget);
       expect(find.text('Towels'), findsOneWidget);
 
-      // Tap Preset 1 (Adult T-Shirt)
-      await tester.tap(find.text('Adult T-Shirt'));
+      // Tap Preset 1 (round button '1')
+      await tester.tap(find.text('1'));
       await tester.pumpAndSettle();
 
       // Opcode 0x00 with slot 0x01
@@ -121,6 +127,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           bleTransportProvider.overrideWithValue(mockTransport),
+          profileStorageProvider.overrideWithValue(InMemoryProfileStorageService()),
           commandPipelineProvider.overrideWithValue(
             CommandPipeline(transport: mockTransport),
           ),
@@ -163,26 +170,56 @@ void main() {
       expect(find.byType(LinearProgressIndicator), findsOneWidget);
 
       // Tapping active running preset triggers soft stop sequence (opcode 0x02)
-      await tester.tap(find.text('Adult T-Shirt'));
+      await tester.tap(find.text('1'));
       await tester.pumpAndSettle();
 
       expect(mockTransport.writtenControlPointPayloads.length, equals(1));
       expect(mockTransport.writtenControlPointPayloads.first, equals([0x02]));
     });
 
-    testWidgets('prompts confirmation and dispatches restoreFactoryPresets opcode 0x0C',
+    testWidgets('does not show ERASE PRESETS on button screen', (tester) async {
+      final container = ProviderContainer(
+        overrides: [
+          bleTransportProvider.overrideWithValue(mockTransport),
+          profileStorageProvider.overrideWithValue(InMemoryProfileStorageService()),
+          commandPipelineProvider.overrideWithValue(CommandPipeline(transport: mockTransport)),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.read(activeProfileProvider.notifier).selectProfile(profile);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: PresetGridWidget(
+                  config: AirWidgetConfig(
+                    type: 'preset-grid',
+                    title: 'Folding Presets',
+                    props: {'columns': 2},
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('ERASE PRESETS'), findsNothing);
+    });
+
+    testWidgets('rename button updates preset subtitle and persists custom name',
         (tester) async {
       final container = ProviderContainer(
         overrides: [
           bleTransportProvider.overrideWithValue(mockTransport),
+          profileStorageProvider.overrideWithValue(InMemoryProfileStorageService()),
           commandPipelineProvider.overrideWithValue(
             CommandPipeline(transport: mockTransport),
           ),
-          latestTelemetryProvider.overrideWith(
-            (ref) => Stream.value(
-              makeTestPacket(systemState: SystemState.idle),
-            ),
-          ),
         ],
       );
       addTearDown(container.dispose);
@@ -208,81 +245,27 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Find ERASE PRESETS button
-      final eraseBtn = find.text('ERASE PRESETS');
-      expect(eraseBtn, findsOneWidget);
-
-      // Tap ERASE PRESETS -> dialog shows
-      await tester.tap(eraseBtn);
+      await tester.tap(find.byTooltip('Customize Button 1'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Erase All Presets in Firmware?'), findsOneWidget);
-      expect(
-        find.text(
-          'This will erase all custom routine sequences from memory and reset all button presets back to factory defaults.\n\nAre you sure you want to proceed?',
-        ),
-        findsOneWidget,
+      expect(find.text('Customize Button 1'), findsOneWidget);
+      expect(find.text('Button Color'), findsOneWidget);
+      await tester.enterText(find.byType(TextField), 'Quick Shirts');
+      // Select the 4th color swatch (emerald) inside the dialog
+      await tester.tap(
+        find
+            .descendant(
+              of: find.byType(AlertDialog),
+              matching: find.byType(InkWell),
+            )
+            .at(3),
       );
-
-      // Tap CANCEL -> dialog dismisses without sending opcode
-      await tester.tap(find.text('CANCEL'));
+      await tester.tap(find.text('SAVE'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Erase All Presets in Firmware?'), findsNothing);
-      expect(mockTransport.writtenControlPointPayloads, isEmpty);
-
-      // Tap ERASE PRESETS again and confirm
-      await tester.tap(eraseBtn);
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('ERASE IN FIRMWARE'));
-      await tester.pumpAndSettle();
-
-      // Verify opcode 0x0C was dispatched
-      expect(mockTransport.writtenControlPointPayloads.length, equals(1));
-      expect(mockTransport.writtenControlPointPayloads.first, equals([0x0C]));
-    });
-
-    testWidgets('PresetGridWidget displays error snackbar when restoreFactoryPresets throws', (tester) async {
-      final failingTransport = MockBleTransport();
-      final container = ProviderContainer(
-        overrides: [
-          bleTransportProvider.overrideWithValue(failingTransport),
-          commandPipelineProvider.overrideWithValue(CommandPipeline(transport: failingTransport)),
-        ],
-      );
-      addTearDown(container.dispose);
-      container.read(activeProfileProvider.notifier).selectProfile(profile);
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: const MaterialApp(
-            home: Scaffold(
-              body: SingleChildScrollView(
-                child: PresetGridWidget(
-                  config: AirWidgetConfig(
-                    type: 'preset-grid',
-                    title: 'Folding Presets',
-                    props: {'columns': 2},
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      failingTransport.failNextWrite = true;
-      await tester.tap(find.text('ERASE PRESETS'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('ERASE IN FIRMWARE'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 1100));
-      await tester.pump(const Duration(milliseconds: 350));
-
-      expect(find.textContaining('Failed to erase presets in firmware'), findsOneWidget);
+      expect(find.text('1'), findsOneWidget);
+      expect(find.text('Quick Shirts'), findsOneWidget);
+      expect(container.read(presetColorsProvider)[1], isNotNull);
     });
   });
 }

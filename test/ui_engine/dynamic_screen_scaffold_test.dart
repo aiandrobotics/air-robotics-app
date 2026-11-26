@@ -13,6 +13,7 @@ import 'package:air_robotics_app/core/profile/profile_storage_service.dart';
 import 'package:air_robotics_app/core/profile/profile_validator.dart';
 import 'package:air_robotics_app/core/protocol/command_pipeline.dart';
 import 'package:air_robotics_app/core/protocol/protocol_providers.dart';
+import 'package:air_robotics_app/core/protocol/routine_models.dart';
 import 'package:air_robotics_app/ui_engine/dynamic_screen_scaffold.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -59,6 +60,7 @@ void main() {
         overrides: [
           bleTransportProvider.overrideWithValue(mockTransport),
           fleetStorageProvider.overrideWithValue(mockFleetStorage),
+          profileStorageProvider.overrideWithValue(InMemoryProfileStorageService()),
           commandPipelineProvider.overrideWithValue(
             CommandPipeline(transport: mockTransport),
           ),
@@ -82,11 +84,17 @@ void main() {
       // Check App Bar metadata
       expect(find.text('Fabrica Cloth Folding Robot'), findsOneWidget);
 
-      // Check Bottom Navigation Destinations
+      // Check Bottom Navigation Destinations (only Control, Sequencer, Calibrate)
       expect(find.text('Control'), findsWidgets);
       expect(find.text('Sequencer'), findsWidgets);
       expect(find.text('Calibrate'), findsWidgets);
-      expect(find.text('Diagnostics'), findsWidgets);
+      expect(find.text('Diagnostics'), findsNothing);
+
+      // Header should only have the 3-dot menu, not individual action icons
+      expect(find.byTooltip('Identify Robot (Pulse LED 3s)'), findsNothing);
+      expect(find.byTooltip('Restore Factory Presets'), findsNothing);
+      expect(find.byTooltip('Disconnect Robot'), findsNothing);
+      expect(find.byTooltip('Hardware Debugger'), findsNothing);
 
       // Screen 0: Control tab widgets
       expect(find.text('FOLDING PRESETS'), findsOneWidget);
@@ -97,20 +105,15 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('SERVO MANUAL JOG'), findsOneWidget);
-      expect(find.text('Left Flap'), findsOneWidget);
-      expect(find.text('Right Flap'), findsOneWidget);
+      expect(find.text('Channel 1'), findsOneWidget);
+      expect(find.text('Channel 2'), findsOneWidget);
+      expect(find.text('#1'), findsOneWidget);
+      expect(find.text('#7'), findsOneWidget);
 
-      // Switch to Screen 3: Diagnostics
-      await tester.tap(find.text('Diagnostics').last);
+      // Open 3-dot menu and navigate to unified Diagnostics & Debugger page
+      await tester.tap(find.byTooltip('More Hardware Options'));
       await tester.pumpAndSettle();
-
-      expect(find.text('PACKET CONSOLE'), findsOneWidget);
-      expect(find.text('TRAJECTORY CHART'), findsOneWidget);
-
-      // Tap BLE Debugger App Bar Icon
-      final debugIcon = find.byIcon(Icons.bug_report);
-      expect(debugIcon, findsOneWidget);
-      await tester.tap(debugIcon);
+      await tester.tap(find.text('Diagnostics & Debugger'));
       await tester.pumpAndSettle();
 
       expect(find.byType(DeveloperDebugScreen), findsOneWidget);
@@ -139,6 +142,7 @@ void main() {
         overrides: [
           bleTransportProvider.overrideWithValue(mockTransport),
           fleetStorageProvider.overrideWithValue(mockFleetStorage),
+          profileStorageProvider.overrideWithValue(InMemoryProfileStorageService()),
           commandPipelineProvider.overrideWithValue(
             CommandPipeline(transport: mockTransport),
           ),
@@ -186,6 +190,7 @@ void main() {
         overrides: [
           bleTransportProvider.overrideWithValue(mockTransport),
           fleetStorageProvider.overrideWithValue(mockFleetStorage),
+          profileStorageProvider.overrideWithValue(InMemoryProfileStorageService()),
           commandPipelineProvider.overrideWithValue(CommandPipeline(transport: mockTransport)),
         ],
       );
@@ -212,19 +217,19 @@ void main() {
       await tester.tap(moreOptions);
       await tester.pumpAndSettle();
 
-      // Tap Full Factory Reset
-      final resetItem = find.text('Full Factory Reset');
+      // Tap Fabrica Factory Reset
+      final resetItem = find.text('Fabrica Factory Reset');
       expect(resetItem, findsOneWidget);
       await tester.tap(resetItem);
       await tester.pumpAndSettle();
 
       // Confirm dialog is present
-      expect(find.text('Full Hardware Factory Reset?'), findsOneWidget);
+      expect(find.text('Fabrica Factory Reset?'), findsOneWidget);
 
       // Tap CANCEL first
       await tester.tap(find.text('CANCEL'));
       await tester.pumpAndSettle();
-      expect(find.text('Full Hardware Factory Reset?'), findsNothing);
+      expect(find.text('Fabrica Factory Reset?'), findsNothing);
 
       // Open popup again and proceed with RESET
       await tester.tap(moreOptions);
@@ -257,6 +262,7 @@ void main() {
         overrides: [
           bleTransportProvider.overrideWithValue(mockTransport),
           fleetStorageProvider.overrideWithValue(mockFleetStorage),
+          profileStorageProvider.overrideWithValue(InMemoryProfileStorageService()),
           commandPipelineProvider.overrideWithValue(CommandPipeline(transport: mockTransport)),
         ],
       );
@@ -277,40 +283,44 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // 1. Identify Robot (0x0E)
-      final identifyIcon = find.byTooltip('Identify Robot (Pulse LED 3s)');
-      expect(identifyIcon, findsOneWidget);
-      await tester.tap(identifyIcon);
+      // 1. Erase Presets (Restore Default Button Presets) via 3-dot menu
+      final moreOptions = find.byTooltip('More Hardware Options');
+      await tester.tap(moreOptions);
       await tester.pumpAndSettle();
-      expect(mockTransport.writtenControlPointPayloads.any((p) => p.isNotEmpty && p.first == 0x0E), isTrue);
-
-      // 2. Erase Presets (Restore Factory Presets)
-      final eraseIcon = find.byTooltip('Restore Factory Presets');
-      expect(eraseIcon, findsOneWidget);
-      await tester.tap(eraseIcon);
+      expect(find.text('Identify Robot'), findsNothing);
+      await tester.tap(find.text('Restore Default Button Presets'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Restore Factory Presets?'), findsOneWidget);
+      expect(find.text('Restore Default Button Presets?'), findsOneWidget);
       await tester.tap(find.text('CANCEL'));
       await tester.pumpAndSettle();
 
-      await tester.tap(eraseIcon);
+      await tester.tap(moreOptions);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('ERASE IN FIRMWARE'));
+      container.read(savedButtonRoutinesProvider.notifier).setRoutine(
+            1,
+            FoldRoutine.fromSteps([FoldStep.dual(0, 1)]),
+          );
+      await tester.tap(find.text('Restore Default Button Presets'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('ERASE ALL PRESETS ON ROBOT'));
       await tester.pumpAndSettle();
       expect(mockTransport.writtenControlPointPayloads.any((p) => p.isNotEmpty && p.first == 0x0C), isTrue);
+      expect(container.read(savedButtonRoutinesProvider), isEmpty);
 
-      // 3. Disconnect
-      final disconnectIcon = find.byTooltip('Disconnect Robot');
-      expect(disconnectIcon, findsOneWidget);
-      await tester.tap(disconnectIcon);
+      // 3. Disconnect via 3-dot menu
+      await tester.tap(moreOptions);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Disconnect'));
       await tester.pumpAndSettle();
 
       expect(find.text('Disconnect Robot?'), findsOneWidget);
       await tester.tap(find.text('CANCEL'));
       await tester.pumpAndSettle();
 
-      await tester.tap(disconnectIcon);
+      await tester.tap(moreOptions);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Disconnect'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('DISCONNECT'));
       await tester.pumpAndSettle();
@@ -403,20 +413,21 @@ void main() {
       await tester.tap(find.text('Diagnostics').last);
       await tester.pumpAndSettle();
 
-      // 2. Erase Presets error SnackBar (lines 85-88)
+      // 2. Erase Presets error SnackBar (lines 85-88) via 3-dot menu
       mockTransport.failNextWrite = true;
-      final eraseIcon = find.byTooltip('Restore Factory Presets');
-      await tester.tap(eraseIcon);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('ERASE IN FIRMWARE'));
-      await tester.pumpAndSettle();
-      expect(find.textContaining('Failed to restore factory presets:'), findsOneWidget);
-
-      // 3. Factory Reset with robotId == null fallback (lines 190-198)
       final moreOptions = find.byTooltip('More Hardware Options');
       await tester.tap(moreOptions);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Full Factory Reset'));
+      await tester.tap(find.text('Restore Default Button Presets'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('ERASE ALL PRESETS ON ROBOT'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Failed to reset button presets:'), findsOneWidget);
+
+      // 3. Factory Reset with robotId == null fallback (lines 190-198)
+      await tester.tap(moreOptions);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Fabrica Factory Reset'));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('RESET EVERYTHING'));
@@ -432,6 +443,114 @@ void main() {
       final navigatorState = tester.state<NavigatorState>(find.byType(Navigator).last);
       navigatorState.maybePop();
       await tester.pumpAndSettle();
+    });
+
+    testWidgets('More Hardware Options menu: rename, disconnect, and unpair',
+        (tester) async {
+      final schemaStr = File('assets/profiles/air-device-profile.schema.json').readAsStringSync();
+      final profileStr = File('assets/profiles/fabrica-devkit-v1.json').readAsStringSync();
+      final profile = ProfileValidator.validateStrings(schemaString: schemaStr, profileString: profileStr);
+
+      final container = ProviderContainer(
+        overrides: [
+          bleTransportProvider.overrideWithValue(mockTransport),
+          fleetStorageProvider.overrideWithValue(mockFleetStorage),
+          profileStorageProvider.overrideWithValue(InMemoryProfileStorageService()),
+          commandPipelineProvider.overrideWithValue(CommandPipeline(transport: mockTransport)),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      container.read(activeProfileProvider.notifier).selectProfile(profile);
+      container.read(isViewingDeviceProvider.notifier).openDevice();
+      await mockFleetStorage.saveRobot(RegisteredRobot(
+        id: 'fab-robot-menu-1',
+        name: 'Fabrica-LivingRoom',
+        modelNumber: 'Fabrica',
+        pairedAt: DateTime.now(),
+      ));
+      await mockFleetStorage.setLastConnectedRobotId('fab-robot-menu-1');
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            home: DynamicScreenScaffold(key: UniqueKey()),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 1. Rename via menu
+      await tester.tap(find.byTooltip('More Hardware Options'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Rename Robot'), findsOneWidget);
+      expect(find.text('Identify Robot'), findsNothing);
+      expect(find.text('Restore Default Button Presets'), findsOneWidget);
+      expect(find.text('Disconnect'), findsOneWidget);
+      expect(find.text('Unpair Robot'), findsOneWidget);
+      expect(find.text('Fabrica Factory Reset'), findsOneWidget);
+      expect(find.text('Diagnostics & Debugger'), findsOneWidget);
+
+      // Diagnostics & Debugger is at the end of the 3-dot menu
+      final factoryResetY = tester.getTopLeft(find.text('Fabrica Factory Reset')).dy;
+      final diagnosticsY = tester.getTopLeft(find.text('Diagnostics & Debugger')).dy;
+      expect(diagnosticsY, greaterThan(factoryResetY));
+
+      await tester.tap(find.text('Rename Robot'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Rename Robot'), findsOneWidget);
+      await tester.enterText(find.byType(TextField), 'My Fabrica Custom');
+      await tester.tap(find.text('SAVE'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('My Fabrica Custom'), findsOneWidget);
+
+      // 2. Disconnect via menu
+      await tester.tap(find.byTooltip('More Hardware Options'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Disconnect'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Disconnect Robot?'), findsOneWidget);
+      await tester.tap(find.text('CANCEL'));
+      await tester.pumpAndSettle();
+
+      // 3. Save custom preset name & calibration, then Unpair via menu
+      await container.read(presetNamesProvider.notifier).renamePreset(1, 'Custom Fold');
+      await container.read(profileStorageProvider).saveCalibration(profile.modelNumber, {0: 15});
+      expect(container.read(presetNamesProvider)[1], 'Custom Fold');
+
+      await tester.tap(find.byTooltip('More Hardware Options'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Unpair Robot'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Unpair My Fabrica Custom?'), findsOneWidget);
+      await tester.tap(find.text('CANCEL'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('More Hardware Options'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Unpair Robot'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('UNPAIR'));
+      await tester.pumpAndSettle();
+
+      expect(container.read(isViewingDeviceProvider), isFalse);
+      expect(container.read(presetNamesProvider), isEmpty);
+      expect(
+        await container.read(profileStorageProvider).getPresetNames(profile.modelNumber),
+        isEmpty,
+      );
+      expect(
+        await container.read(profileStorageProvider).getCalibration(profile.modelNumber),
+        isNull,
+      );
+      final remaining = await mockFleetStorage.getRegisteredRobots();
+      expect(remaining.any((r) => r.id == 'fab-robot-menu-1'), isFalse);
     });
   });
 }

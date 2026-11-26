@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:air_robotics_app/core/ble/ble_providers.dart';
 import 'package:air_robotics_app/core/profile/device_profile.dart';
 import 'package:air_robotics_app/core/profile/profile_providers.dart';
+import 'package:air_robotics_app/core/profile/profile_storage_service.dart';
 import 'package:air_robotics_app/core/profile/profile_validator.dart';
 import 'package:air_robotics_app/core/protocol/command_pipeline.dart';
 import 'package:air_robotics_app/core/protocol/protocol_providers.dart';
@@ -66,6 +67,9 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           bleTransportProvider.overrideWithValue(mockTransport),
+          profileStorageProvider.overrideWithValue(
+            InMemoryProfileStorageService(),
+          ),
           commandPipelineProvider.overrideWithValue(
             CommandPipeline(transport: mockTransport),
           ),
@@ -84,11 +88,13 @@ void main() {
           container: container,
           child: const MaterialApp(
             home: Scaffold(
-              body: JogSliderBankWidget(
-                config: AirWidgetConfig(
-                  type: 'jog-slider-bank',
-                  title: 'Servo Manual Jog',
-                  props: {'drag_throttle_ms': 50},
+              body: SingleChildScrollView(
+                child: JogSliderBankWidget(
+                  config: AirWidgetConfig(
+                    type: 'jog-slider-bank',
+                    title: 'Servo Manual Jog',
+                    props: {'drag_throttle_ms': 50},
+                  ),
                 ),
               ),
             ),
@@ -98,10 +104,21 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('SERVO MANUAL JOG'), findsOneWidget);
-      expect(find.text('Left Flap'), findsOneWidget);
-      expect(find.text('Right Flap'), findsOneWidget);
-      expect(find.text('Bottom Flap'), findsOneWidget);
-      expect(find.text('Top Flap'), findsOneWidget);
+      expect(find.text('#1'), findsOneWidget);
+      expect(find.text('#7'), findsOneWidget);
+      expect(find.text('#6'), findsOneWidget);
+      expect(find.text('#12'), findsOneWidget);
+      expect(find.textContaining('Left Flap'), findsNothing);
+      expect(find.text('HOME'), findsNothing);
+
+      // Verify calibration rows are ordered by channel (Channel 1 -> Channel 2 -> Channel 3 -> Channel 4)
+      final ch1Y = tester.getTopLeft(find.text('Channel 1')).dy;
+      final ch2Y = tester.getTopLeft(find.text('Channel 2')).dy;
+      final ch3Y = tester.getTopLeft(find.text('Channel 3')).dy;
+      final ch4Y = tester.getTopLeft(find.text('Channel 4')).dy;
+      expect(ch1Y, lessThan(ch2Y));
+      expect(ch2Y, lessThan(ch3Y));
+      expect(ch3Y, lessThan(ch4Y));
 
       expect(find.text('(45°)'), findsOneWidget);
       expect(find.text('(90°)'), findsOneWidget);
@@ -112,6 +129,9 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           bleTransportProvider.overrideWithValue(mockTransport),
+          profileStorageProvider.overrideWithValue(
+            InMemoryProfileStorageService(),
+          ),
           commandPipelineProvider.overrideWithValue(
             CommandPipeline(transport: mockTransport),
           ),
@@ -130,10 +150,12 @@ void main() {
           container: container,
           child: const MaterialApp(
             home: Scaffold(
-              body: JogSliderBankWidget(
-                config: AirWidgetConfig(
-                  type: 'jog-slider-bank',
-                  props: {'drag_throttle_ms': 50},
+              body: SingleChildScrollView(
+                child: JogSliderBankWidget(
+                  config: AirWidgetConfig(
+                    type: 'jog-slider-bank',
+                    props: {'drag_throttle_ms': 50},
+                  ),
                 ),
               ),
             ),
@@ -142,18 +164,15 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Tap HOME on channel 0
-      final homeButtons = find.text('HOME');
-      expect(homeButtons, findsNWidgets(4));
-      await tester.tap(homeButtons.first);
+      // Per-row HOME buttons are removed; dragging slider dispatches 0x0D jog command
+      expect(find.text('HOME'), findsNothing);
+      await tester.drag(find.byType(Slider).first, const Offset(100, 0));
       await tester.pumpAndSettle();
 
-      // Opcode 0x0D: [0x0D, 0x00, 0x00] (channel 0, 0°)
-      expect(mockTransport.writtenControlPointPayloads.length, equals(1));
-      expect(
-        mockTransport.writtenControlPointPayloads.first,
-        equals([0x0D, 0x00, 0x00]),
-      );
+      // Opcode 0x0D: [0x0D, 0x00, angle]
+      expect(mockTransport.writtenControlPointPayloads.isNotEmpty, isTrue);
+      expect(mockTransport.writtenControlPointPayloads.first[0], equals(0x0D));
+      expect(mockTransport.writtenControlPointPayloads.first[1], equals(0x00));
 
       // Tap HOME ALL button
       final homeAllBtn = find.text('HOME ALL');

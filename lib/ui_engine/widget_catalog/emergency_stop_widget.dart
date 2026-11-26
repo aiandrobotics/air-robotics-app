@@ -7,6 +7,7 @@ import '../../core/protocol/protocol_providers.dart';
 import '../../core/protocol/telemetry_packet.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_tokens.dart';
+import '../../l10n/app_localizations.dart';
 
 /// Prominent, tactile Emergency Stop widget with pulsating safety indicator,
 /// immediate <50ms fast-path dispatch without response, and heavy haptics.
@@ -85,7 +86,7 @@ class _EmergencyStopWidgetState extends ConsumerState<EmergencyStopWidget> {
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.amber.withValues(alpha: 0.3),
+                    color: AppColors.of(context).amber.withValues(alpha: 0.3),
                     blurRadius: 16,
                     spreadRadius: 1,
                   ),
@@ -93,17 +94,18 @@ class _EmergencyStopWidgetState extends ConsumerState<EmergencyStopWidget> {
               ),
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.amber,
-                  foregroundColor: Colors.black,
+                  backgroundColor: AppColors.of(context).amber,
+                  foregroundColor: AppColors.of(context).textOnAccent,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
                 icon: const Icon(Icons.lock_open_rounded, size: 24),
-                label: const Text(
-                  'CLEAR & UNLATCH E-STOP',
-                  style: TextStyle(
+                label: Text(
+                  AppLocalizations.of(context)?.clearEstop ??
+                      'CLEAR & UNLATCH E-STOP',
+                  style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 1.0,
@@ -113,9 +115,10 @@ class _EmergencyStopWidgetState extends ConsumerState<EmergencyStopWidget> {
               ),
             ),
             const SizedBox(height: 6),
-            const Text(
-              'Resets emergency stop and returns robot to Idle',
-              style: TextStyle(fontSize: 10, color: AppColors.amber),
+            Text(
+              AppLocalizations.of(context)?.clearEstopHint ??
+                  'Resets emergency stop and returns robot to Idle',
+              style: TextStyle(fontSize: 10, color: AppColors.of(context).amber),
             ),
           ],
         ),
@@ -134,7 +137,7 @@ class _EmergencyStopWidgetState extends ConsumerState<EmergencyStopWidget> {
                 boxShadow: isRunning
                     ? [
                         BoxShadow(
-                          color: AppColors.crimson.withValues(alpha: 0.6),
+                          color: AppColors.of(context).crimson.withValues(alpha: 0.6),
                           blurRadius: 16,
                           spreadRadius: 2,
                         ),
@@ -149,7 +152,7 @@ class _EmergencyStopWidgetState extends ConsumerState<EmergencyStopWidget> {
               ),
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.crimson,
+                  backgroundColor: AppColors.of(context).crimson,
                   foregroundColor: Colors.white,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
@@ -157,14 +160,15 @@ class _EmergencyStopWidgetState extends ConsumerState<EmergencyStopWidget> {
                   ),
                 ),
                 onPressed: _isDispatching ? null : _triggerEmergencyStop,
-                child: const Row(
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.emergency, size: 28),
-                    SizedBox(width: AppTokens.space12),
+                    const Icon(Icons.emergency, size: 28),
+                    const SizedBox(width: AppTokens.space12),
                     Text(
-                      'EMERGENCY STOP',
-                      style: TextStyle(
+                      AppLocalizations.of(context)?.emergencyStop ??
+                          'EMERGENCY STOP',
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 1.2,
@@ -181,21 +185,21 @@ class _EmergencyStopWidgetState extends ConsumerState<EmergencyStopWidget> {
               height: 60,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.border),
+                border: Border.all(color: AppColors.of(context).border),
               ),
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.surfaceHighlight,
-                  foregroundColor: AppColors.textPrimary,
+                  backgroundColor: AppColors.of(context).surfaceHighlight,
+                  foregroundColor: AppColors.of(context).textPrimary,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                icon: const Icon(Icons.stop_circle_outlined, size: 22, color: AppColors.amber),
-                label: const Text(
-                  'STOP',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                icon: Icon(Icons.stop_circle_outlined, size: 22, color: AppColors.of(context).amber),
+                label: Text(
+                  AppLocalizations.of(context)?.stopButton ?? 'STOP',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 onPressed: _isDispatching ? null : _clearEstopOrStopSequence,
               ),

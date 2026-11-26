@@ -81,7 +81,7 @@ void main() {
 
     // Device Screen is now visible!
     expect(find.byTooltip('Back to Home'), findsOneWidget);
-    expect(find.byTooltip('Disconnect Robot'), findsOneWidget);
+    expect(find.byTooltip('More Hardware Options'), findsOneWidget);
 
     // Tap Back Button -> returns to Home Page!
     await tester.tap(find.byTooltip('Back to Home'));

@@ -71,9 +71,7 @@ class ViewingDeviceNotifier extends Notifier<bool> {
   @override
   bool build() {
     ref.listen<AsyncValue<BleConnectionState>>(bleConnectionStateProvider, (prev, next) {
-      if (next.value == BleConnectionState.ready) {
-        state = true;
-      } else if (next.value == BleConnectionState.disconnected) {
+      if (next.value == BleConnectionState.disconnected) {
         state = false;
       }
     });

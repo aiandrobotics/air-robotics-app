@@ -8,6 +8,7 @@ import '../core/fleet/fleet_providers.dart';
 import '../core/fleet/registered_robot.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_tokens.dart';
+import '../l10n/app_localizations.dart';
 import 'pair_robot_screen.dart';
 
 /// Catalog screen presenting supported robots and dynamically showing
@@ -61,7 +62,7 @@ class _AddDeviceCatalogScreenState extends ConsumerState<AddDeviceCatalogScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to connect to ${robot.name}: $e'),
-            backgroundColor: AppColors.crimson,
+            backgroundColor: AppColors.of(context).crimson,
           ),
         );
       }
@@ -88,9 +89,9 @@ class _AddDeviceCatalogScreenState extends ConsumerState<AddDeviceCatalogScreen>
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'ADD NEW ROBOT',
-          style: TextStyle(
+        title: Text(
+          AppLocalizations.of(context)?.addDeviceTitle ?? 'ADD NEW ROBOT',
+          style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
             letterSpacing: 1.2,
@@ -107,24 +108,25 @@ class _AddDeviceCatalogScreenState extends ConsumerState<AddDeviceCatalogScreen>
               Container(
                 padding: const EdgeInsets.all(AppTokens.space12),
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
+                  color: AppColors.of(context).surface,
                   borderRadius: AppTokens.borderRadiusMd,
-                  border: Border.all(color: AppColors.border),
+                  border: Border.all(color: AppColors.of(context).border),
                 ),
-                child: const Row(
+                child: Row(
                   children: [
                     Icon(
                       Icons.hub_outlined,
-                      color: AppColors.cyan,
+                      color: AppColors.of(context).cyan,
                       size: 22,
                     ),
-                    SizedBox(width: AppTokens.space12),
+                    const SizedBox(width: AppTokens.space12),
                     Expanded(
                       child: Text(
-                        'Select a robot below to pair. Any nearby robot in pairing mode will be automatically discovered at the top.',
+                        AppLocalizations.of(context)?.addRobotIntro ??
+                            'Select a robot below to pair. Any nearby robot in pairing mode will be automatically discovered at the top.',
                         style: TextStyle(
                           fontSize: 12,
-                          color: AppColors.textSecondary,
+                          color: AppColors.of(context).textSecondary,
                           height: 1.4,
                         ),
                       ),
@@ -139,10 +141,15 @@ class _AddDeviceCatalogScreenState extends ConsumerState<AddDeviceCatalogScreen>
               if (candidateDiscovered.isNotEmpty) ...[
                 _buildSectionHeader(
                   title: candidateDiscovered.length > 1
-                      ? 'AUTO DISCOVERED ROBOTS'
-                      : 'AUTO DISCOVERED ROBOT',
-                  badgeText: '${candidateDiscovered.length} READY',
-                  badgeColor: AppColors.emerald,
+                      ? (AppLocalizations.of(context)?.autoDiscoveredRobots ??
+                          'AUTO DISCOVERED ROBOTS')
+                      : (AppLocalizations.of(context)?.autoDiscoveredRobot ??
+                          'AUTO DISCOVERED ROBOT'),
+                  badgeText: AppLocalizations.of(context)?.readyCountBadge(
+                        candidateDiscovered.length,
+                      ) ??
+                      '${candidateDiscovered.length} READY',
+                  badgeColor: AppColors.of(context).emerald,
                   icon: Icons.radar,
                 ),
                 const SizedBox(height: AppTokens.space8),
@@ -162,10 +169,11 @@ class _AddDeviceCatalogScreenState extends ConsumerState<AddDeviceCatalogScreen>
 
               // 2. SUPPORTED ROBOTS SECTION
               _buildSectionHeader(
-                title: 'SUPPORTED ROBOTS',
+                title: AppLocalizations.of(context)?.supportedRobots ??
+                    'SUPPORTED ROBOTS',
                 icon: Icons.check_circle_outline,
               ),
-              const SizedBox(height: AppTokens.space8),
+              SizedBox(height: AppTokens.space8),
 
               // Fabrica Card
               _buildFabricaCard(context),
@@ -179,19 +187,20 @@ class _AddDeviceCatalogScreenState extends ConsumerState<AddDeviceCatalogScreen>
   Widget _buildSectionHeader({
     required String title,
     String? badgeText,
-    Color badgeColor = AppColors.cyan,
+    Color? badgeColor,
     required IconData icon,
   }) {
+    final effectiveBadgeColor = badgeColor ?? AppColors.of(context).cyan;
     return Row(
       children: [
-        Icon(icon, size: 14, color: badgeColor),
+        Icon(icon, size: 14, color: effectiveBadgeColor),
         const SizedBox(width: AppTokens.space4),
         Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.bold,
-            color: AppColors.textSecondary,
+            color: AppColors.of(context).textSecondary,
             letterSpacing: 0.8,
           ),
         ),
@@ -200,16 +209,16 @@ class _AddDeviceCatalogScreenState extends ConsumerState<AddDeviceCatalogScreen>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
-              color: badgeColor.withValues(alpha: 0.15),
+              color: effectiveBadgeColor.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: badgeColor.withValues(alpha: 0.4)),
+              border: Border.all(color: effectiveBadgeColor.withValues(alpha: 0.4)),
             ),
             child: Text(
               badgeText,
               style: TextStyle(
                 fontSize: 9,
                 fontWeight: FontWeight.bold,
-                color: badgeColor,
+                color: effectiveBadgeColor,
                 letterSpacing: 0.5,
               ),
             ),
@@ -224,18 +233,18 @@ class _AddDeviceCatalogScreenState extends ConsumerState<AddDeviceCatalogScreen>
 
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.of(context).surface,
         borderRadius: AppTokens.borderRadiusMd,
         border: Border.all(
           color: robot.isPairingMode
-              ? AppColors.emerald.withValues(alpha: 0.7)
-              : AppColors.border,
+              ? AppColors.of(context).emerald.withValues(alpha: 0.7)
+              : AppColors.of(context).border,
           width: robot.isPairingMode ? 1.5 : 1.0,
         ),
         boxShadow: robot.isPairingMode
             ? [
                 BoxShadow(
-                  color: AppColors.emerald.withValues(alpha: 0.12),
+                  color: AppColors.of(context).emerald.withValues(alpha: 0.12),
                   blurRadius: 10,
                   spreadRadius: 1,
                 ),
@@ -256,13 +265,13 @@ class _AddDeviceCatalogScreenState extends ConsumerState<AddDeviceCatalogScreen>
                   height: 42,
                   decoration: BoxDecoration(
                     color: robot.isPairingMode
-                        ? AppColors.emerald.withValues(alpha: 0.15)
-                        : AppColors.surfaceHighlight,
+                        ? AppColors.of(context).emerald.withValues(alpha: 0.15)
+                        : AppColors.of(context).surfaceHighlight,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                       color: robot.isPairingMode
-                          ? AppColors.emerald
-                          : AppColors.border,
+                          ? AppColors.of(context).emerald
+                          : AppColors.of(context).border,
                     ),
                   ),
                   child: Icon(
@@ -270,9 +279,7 @@ class _AddDeviceCatalogScreenState extends ConsumerState<AddDeviceCatalogScreen>
                         ? Icons.dry_cleaning
                         : Icons.precision_manufacturing,
                     size: 22,
-                    color: robot.isPairingMode
-                        ? AppColors.emerald
-                        : AppColors.cyan,
+                    color: AppColors.of(context).emerald,
                   ),
                 ),
                 const SizedBox(width: AppTokens.space12),
@@ -283,19 +290,19 @@ class _AddDeviceCatalogScreenState extends ConsumerState<AddDeviceCatalogScreen>
                       Text(
                         robot.name,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
+                          color: AppColors.of(context).textPrimary,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         'ID: ${robot.id.substring(0, math.min(10, robot.id.length))}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 10,
                           fontFamily: 'monospace',
-                          color: AppColors.textMuted,
+                          color: AppColors.of(context).textMuted,
                         ),
                       ),
                     ],
@@ -308,36 +315,35 @@ class _AddDeviceCatalogScreenState extends ConsumerState<AddDeviceCatalogScreen>
                     vertical: 8,
                   ),
                   decoration: BoxDecoration(
-                    color: robot.isPairingMode
-                        ? AppColors.emerald
-                        : AppColors.cyan,
+                    color: AppColors.of(context).emerald,
                     borderRadius: AppTokens.borderRadiusSm,
                   ),
                   child: isConnecting
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 14,
                           height: 14,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.black,
+                            color: AppColors.of(context).textOnAccent,
                           ),
                         )
-                      : const Row(
+                      : Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              'PAIR & CONNECT',
+                              AppLocalizations.of(context)?.pairAndConnect ??
+                                  'PAIR & CONNECT',
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.black,
+                                color: AppColors.of(context).textOnAccent,
                               ),
                             ),
-                            SizedBox(width: 4),
+                            const SizedBox(width: 4),
                             Icon(
                               Icons.arrow_forward,
                               size: 13,
-                              color: Colors.black,
+                              color: AppColors.of(context).textOnAccent,
                             ),
                           ],
                         ),
@@ -364,15 +370,15 @@ class _AddDeviceCatalogScreenState extends ConsumerState<AddDeviceCatalogScreen>
 
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.of(context).surface,
         borderRadius: AppTokens.borderRadiusLg,
         border: Border.all(
-          color: AppColors.cyan.withValues(alpha: 0.6),
+          color: AppColors.of(context).cyan.withValues(alpha: 0.6),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.cyan.withValues(alpha: 0.12),
+            color: AppColors.of(context).cyan.withValues(alpha: 0.12),
             blurRadius: 16,
             spreadRadius: 1,
           ),
@@ -395,20 +401,20 @@ class _AddDeviceCatalogScreenState extends ConsumerState<AddDeviceCatalogScreen>
                       width: 52,
                       height: 52,
                       decoration: BoxDecoration(
-                        color: AppColors.surfaceHighlight,
+                        color: AppColors.of(context).surfaceHighlight,
                         borderRadius: AppTokens.borderRadiusMd,
-                        border: Border.all(color: AppColors.cyan),
+                        border: Border.all(color: AppColors.of(context).cyan),
                       ),
-                      child: const Center(
+                      child: Center(
                         child: Icon(
                           Icons.dry_cleaning,
-                          color: AppColors.cyan,
+                          color: AppColors.of(context).cyan,
                           size: 30,
                         ),
                       ),
                     ),
                     const SizedBox(width: AppTokens.space12),
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -418,15 +424,16 @@ class _AddDeviceCatalogScreenState extends ConsumerState<AddDeviceCatalogScreen>
                               fontSize: 17,
                               fontWeight: FontWeight.bold,
                               letterSpacing: 1.2,
-                              color: AppColors.textPrimary,
+                              color: AppColors.of(context).textPrimary,
                             ),
                           ),
-                          SizedBox(height: 2),
+                          const SizedBox(height: 2),
                           Text(
-                            'Cloths Folding Robot',
+                            AppLocalizations.of(context)?.clothesFoldingRobot ??
+                                'Clothes Folding Robot',
                             style: TextStyle(
                               fontSize: 12,
-                              color: AppColors.textSecondary,
+                              color: AppColors.of(context).textSecondary,
                             ),
                           ),
                         ],
@@ -435,11 +442,12 @@ class _AddDeviceCatalogScreenState extends ConsumerState<AddDeviceCatalogScreen>
                   ],
                 ),
                 const SizedBox(height: AppTokens.space12),
-                const Text(
-                  'Automated garment folder with multi-garment presets and tactile single-button operation.',
+                Text(
+                  AppLocalizations.of(context)?.fabricaDescription ??
+                      'Automated garment folder with multi-garment presets and tactile single-button operation.',
                   style: TextStyle(
                     fontSize: 12,
-                    color: AppColors.textPrimary,
+                    color: AppColors.of(context).textPrimary,
                     height: 1.35,
                   ),
                 ),
@@ -447,26 +455,27 @@ class _AddDeviceCatalogScreenState extends ConsumerState<AddDeviceCatalogScreen>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: AppColors.amber.withValues(alpha: 0.1),
+                    color: AppColors.of(context).amber.withValues(alpha: 0.1),
                     borderRadius: AppTokens.borderRadiusSm,
                     border: Border.all(
-                      color: AppColors.amber.withValues(alpha: 0.3),
+                      color: AppColors.of(context).amber.withValues(alpha: 0.3),
                     ),
                   ),
-                  child: const Row(
+                  child: Row(
                     children: [
                       Icon(
                         Icons.touch_app_outlined,
                         size: 16,
-                        color: AppColors.amber,
+                        color: AppColors.of(context).amber,
                       ),
-                      SizedBox(width: 8),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Pairing mode: Press and hold any button on the Fabrica control panel for 3 seconds (Status LED will blink rapidly).',
+                          AppLocalizations.of(context)?.fabricaPairingHint ??
+                              'Pairing mode: Press and hold any button on the Fabrica control panel for 3 seconds (Status LED will blink rapidly).',
                           style: TextStyle(
                             fontSize: 11,
-                            color: AppColors.amber,
+                            color: AppColors.of(context).amber,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -479,16 +488,17 @@ class _AddDeviceCatalogScreenState extends ConsumerState<AddDeviceCatalogScreen>
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.cyan,
-                      foregroundColor: Colors.black,
+                      backgroundColor: AppColors.of(context).cyan,
+                      foregroundColor: AppColors.of(context).textOnAccent,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: AppTokens.borderRadiusSm,
                       ),
                     ),
                     icon: const Icon(Icons.bluetooth_searching, size: 18),
-                    label: const Text(
-                      'PAIR FABRICA NOW',
+                    label: Text(
+                      AppLocalizations.of(context)?.pairFabricaNow ??
+                          'PAIR FABRICA NOW',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,

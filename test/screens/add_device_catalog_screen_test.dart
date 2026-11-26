@@ -46,7 +46,7 @@ void main() {
       expect(find.text('ADD NEW ROBOT'), findsOneWidget);
       expect(find.text('SUPPORTED ROBOTS'), findsOneWidget);
       expect(find.text('FABRICA'), findsOneWidget);
-      expect(find.text('Cloths Folding Robot'), findsOneWidget);
+      expect(find.text('Clothes Folding Robot'), findsOneWidget);
       expect(find.textContaining('Press and hold any button on the Fabrica control panel for 3 seconds'), findsOneWidget);
       expect(find.text('PAIR FABRICA NOW'), findsOneWidget);
 
@@ -82,7 +82,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      await tester.tap(find.text('Cloths Folding Robot'));
+      await tester.tap(find.text('Clothes Folding Robot'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 

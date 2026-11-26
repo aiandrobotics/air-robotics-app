@@ -3,6 +3,8 @@ import 'package:air_robotics_app/core/ble/ble_transport_interface.dart';
 import 'package:air_robotics_app/core/fleet/fleet_providers.dart';
 import 'package:air_robotics_app/core/fleet/fleet_storage_service.dart';
 import 'package:air_robotics_app/core/fleet/registered_robot.dart';
+import 'package:air_robotics_app/core/profile/profile_providers.dart';
+import 'package:air_robotics_app/core/profile/profile_storage_service.dart';
 import 'package:air_robotics_app/screens/landing_dashboard_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -37,6 +39,7 @@ void main() {
         overrides: [
           bleTransportProvider.overrideWithValue(mockTransport),
           fleetStorageProvider.overrideWithValue(mockFleetStorage),
+          profileStorageProvider.overrideWithValue(InMemoryProfileStorageService()),
         ],
         child: MaterialApp(
           home: LandingDashboardScreen(key: UniqueKey()),
@@ -102,8 +105,9 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      // Opportunistic auto-connect connects to the paired robot!
+      // Opportunistic auto-connect connects to the paired robot without leaving home!
       expect(mockTransport.currentConnectionState, BleConnectionState.connected);
+      expect(find.text('YOUR ROBOTS'), findsOneWidget);
       expect(find.text('CONNECTED'), findsOneWidget);
       expect(find.text('OPEN'), findsOneWidget);
       expect(find.text('Strong'), findsOneWidget);
@@ -187,109 +191,28 @@ void main() {
       expect(find.text('Fabrica-LivingRoom'), findsOneWidget);
       expect(find.text('CONNECTED'), findsOneWidget);
 
-      // 1. OPEN button opens device
+      // Verify three dotted menu is removed from home screen
+      expect(find.byIcon(Icons.more_vert), findsNothing);
+
+      // 1. OPEN indicator or full record tap opens device
       final openButton = find.text('OPEN');
       expect(openButton, findsOneWidget);
       await tester.tap(openButton);
       await tester.pump();
 
-      // 2. Open popup menu on registered robot
-      final moreButton = find.byIcon(Icons.more_vert);
-      expect(moreButton, findsOneWidget);
-      await tester.tap(moreButton);
-      await tester.pumpAndSettle();
-
-      expect(find.text('Disconnect'), findsOneWidget);
-      expect(find.text('Rename'), findsOneWidget);
-      expect(find.text('Factory Reset'), findsOneWidget);
-      expect(find.text('Unpair'), findsOneWidget);
-
-      // Test Rename: cancel then save
-      await tester.tap(find.text('Rename'));
-      await tester.pumpAndSettle();
-      expect(find.text('Rename Robot'), findsOneWidget);
-      await tester.tap(find.text('CANCEL'));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byIcon(Icons.more_vert));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Rename'));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextField), 'Bedroom Folder');
-      await tester.tap(find.text('SAVE'));
-      await tester.pumpAndSettle();
-      expect(find.text('Bedroom Folder'), findsOneWidget);
-
-      // Test Factory Reset (with lastConnectedRobotId set so line 310 executes)
-      await mockFleetStorage.setLastConnectedRobotId('robot-reg-1');
-      await tester.tap(find.byIcon(Icons.more_vert));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Factory Reset'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Full Hardware Factory Reset?'), findsOneWidget);
-      await tester.tap(find.text('CANCEL'));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byIcon(Icons.more_vert));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Factory Reset'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('RESET EVERYTHING'));
-      await tester.pump(const Duration(milliseconds: 400));
-      await tester.pumpAndSettle();
-
-      // Verify opcode 0x1F was sent
-      expect(mockTransport.writtenControlPointPayloads.any((p) => p.isNotEmpty && p.first == 0x1F), isTrue);
-
-      // Test Disconnect action on newly connected robot
-      final robot2 = RegisteredRobot(
-        id: 'robot-reg-2',
-        name: 'Fabrica-Kitchen',
-        modelNumber: 'Fabrica-DevKit-v1',
-        pairedAt: DateTime.now(),
-      );
-      await mockFleetStorage.saveRobot(robot2);
-      await mockTransport.connect('robot-reg-2');
-      await mockTransport.discoverServices();
-      await tester.pumpWidget(createTestApp());
+      // Tap full card record opens device as well
+      await tester.tap(find.text('Fabrica-LivingRoom'));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
 
-      final popupIcons2 = find.byIcon(Icons.more_vert);
-      await tester.tap(popupIcons2.first);
+      // Test long press triggers unpair confirmation
+      await tester.longPress(find.text('Fabrica-LivingRoom'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Disconnect'));
-      await tester.pumpAndSettle();
-      expect(mockTransport.currentConnectionState, BleConnectionState.disconnected);
 
-      // Test Unpair on connected robot to hit lines 357 and 364
-      final robot3 = RegisteredRobot(
-        id: 'robot-reg-3',
-        name: 'Fabrica-Garage',
-        modelNumber: 'Fabrica-DevKit-v1',
-        pairedAt: DateTime.now(),
-      );
-      await mockFleetStorage.saveRobot(robot3);
-      await mockFleetStorage.setLastConnectedRobotId('robot-reg-3');
-      await mockTransport.connect('robot-reg-3');
-      await mockTransport.discoverServices();
-      await tester.pumpWidget(createTestApp());
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
-
-      final popupIcons3 = find.byIcon(Icons.more_vert);
-      await tester.tap(popupIcons3.first);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Unpair'));
-      await tester.pumpAndSettle();
-      expect(find.text('CANCEL'), findsOneWidget);
+      expect(find.text('Unpair Fabrica-LivingRoom?'), findsOneWidget);
       await tester.tap(find.text('CANCEL'));
       await tester.pumpAndSettle();
 
-      await tester.tap(popupIcons3.first);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Unpair'));
+      await tester.longPress(find.text('Fabrica-LivingRoom'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('UNPAIR'));
       await tester.pumpAndSettle();
@@ -400,14 +323,11 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
       expect(mockTransport.currentConnectionState, BleConnectionState.connected);
 
-      // Unpair r2 while connected to r1 (line 356: connectedRobot?.id != robot.id && currentState != disconnected)
-      final moreButtons = find.byIcon(Icons.more_vert);
-      await tester.tap(moreButtons.at(1));
+      // Unpair r2 via long press while connected to r1
+      await tester.longPress(find.text('Fabrica-Dining'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
-      await tester.tap(find.text('Unpair'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 200));
+      expect(find.text('Unpair Fabrica-Dining?'), findsOneWidget);
       await tester.tap(find.text('UNPAIR'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));

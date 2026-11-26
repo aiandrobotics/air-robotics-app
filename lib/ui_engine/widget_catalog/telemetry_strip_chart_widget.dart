@@ -25,17 +25,21 @@ class _TelemetryStripChartWidgetState
   final List<_ChartSample> _samples = [];
   int _lastSampleSeq = -1;
 
-  static const List<Color> _channelColors = [
-    AppColors.cyan,
-    AppColors.amber,
-    AppColors.emerald,
-    AppColors.purple,
-    Colors.deepOrange,
-    Colors.tealAccent,
-  ];
+  List<Color> _channelColorsFor(BuildContext context) {
+    final colors = AppColors.of(context);
+    return [
+      colors.cyan,
+      colors.amber,
+      colors.emerald,
+      colors.purple,
+      Colors.deepOrange,
+      colors.isDark ? Colors.tealAccent : Colors.teal,
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
+    final channelColors = _channelColorsFor(context);
     final windowSeconds =
         (widget.config.props['window_seconds'] as num?)?.toInt() ?? 10;
     final activeProfile = ref.watch(activeProfileProvider);
@@ -65,17 +69,17 @@ class _TelemetryStripChartWidgetState
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.show_chart,
-                        color: AppColors.cyan, size: 20),
+                    Icon(Icons.show_chart,
+                        color: AppColors.of(context).cyan, size: 20),
                     const SizedBox(width: AppTokens.space8),
                     Text(
                       widget.config.title.isNotEmpty
                           ? widget.config.title.toUpperCase()
                           : 'TRAJECTORY STRIP CHART',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.cyan,
+                        color: AppColors.of(context).cyan,
                         letterSpacing: 0.8,
                       ),
                     ),
@@ -83,9 +87,9 @@ class _TelemetryStripChartWidgetState
                 ),
                 Text(
                   '${windowSeconds}s window',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 10,
-                    color: AppColors.textSecondary,
+                    color: AppColors.of(context).textSecondary,
                   ),
                 ),
               ],
@@ -97,7 +101,7 @@ class _TelemetryStripChartWidgetState
               spacing: 8,
               runSpacing: 4,
               children: List.generate(actuatorCount, (i) {
-                final color = _channelColors[i % _channelColors.length];
+                final color = channelColors[i % channelColors.length];
                 final name = activeProfile.actuators[i].name;
                 return Row(
                   mainAxisSize: MainAxisSize.min,
@@ -131,9 +135,11 @@ class _TelemetryStripChartWidgetState
               height: 140,
               width: double.infinity,
               decoration: BoxDecoration(
-                color: Colors.black,
+                color: AppColors.of(context).isDark
+                    ? Colors.black
+                    : AppColors.of(context).surfaceHighlight,
                 borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: AppColors.border),
+                border: Border.all(color: AppColors.of(context).border),
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(6),
@@ -141,8 +147,9 @@ class _TelemetryStripChartWidgetState
                   painter: _StripChartPainter(
                     samples: _samples,
                     channelCount: actuatorCount,
-                    channelColors: _channelColors,
+                    channelColors: channelColors,
                     windowDuration: Duration(seconds: windowSeconds),
+                    borderColor: AppColors.of(context).border,
                   ),
                 ),
               ),
@@ -166,19 +173,21 @@ class _StripChartPainter extends CustomPainter {
   final int channelCount;
   final List<Color> channelColors;
   final Duration windowDuration;
+  final Color borderColor;
 
   _StripChartPainter({
     required this.samples,
     required this.channelCount,
     required this.channelColors,
     required this.windowDuration,
+    required this.borderColor,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
     // 1. Draw Grid Lines (0°, 45°, 90°, 135°, 180°)
     final gridPaint = Paint()
-      ..color = AppColors.border.withValues(alpha: 0.3)
+      ..color = borderColor.withValues(alpha: 0.3)
       ..strokeWidth = 1.0;
 
     for (int deg = 0; deg <= 180; deg += 45) {

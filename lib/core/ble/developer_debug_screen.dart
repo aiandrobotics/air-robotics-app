@@ -4,9 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../protocol/protocol_providers.dart';
 import '../protocol/telemetry_packet.dart';
+import '../profile/device_profile.dart';
 import '../profile/profile_providers.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_tokens.dart';
+import '../../ui_engine/widget_catalog/telemetry_strip_chart_widget.dart';
 import 'ble_providers.dart';
 import 'ble_transport_interface.dart';
 
@@ -170,9 +172,9 @@ class _DeveloperDebugScreenState extends ConsumerState<DeveloperDebugScreen> {
                           connectionManager.disconnect();
                           _addLog('Disconnected by user');
                         },
-                        child: const Text(
+                        child: Text(
                           'DISCONNECT',
-                          style: TextStyle(color: AppColors.crimson),
+                          style: TextStyle(color: AppColors.of(context).crimson),
                         ),
                       ),
                   ],
@@ -192,12 +194,12 @@ class _DeveloperDebugScreenState extends ConsumerState<DeveloperDebugScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
+                        Text(
                           'ACTIVE DEVICE PROFILE',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
-                            color: AppColors.cyan,
+                            color: AppColors.of(context).cyan,
                             letterSpacing: 0.8,
                           ),
                         ),
@@ -205,16 +207,16 @@ class _DeveloperDebugScreenState extends ConsumerState<DeveloperDebugScreen> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: AppColors.surfaceHighlight,
+                            color: AppColors.of(context).surfaceHighlight,
                             borderRadius: BorderRadius.circular(4),
-                            border: Border.all(color: AppColors.border),
+                            border: Border.all(color: AppColors.of(context).border),
                           ),
                           child: Text(
                             'v${activeProfile.schemaVersion}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
-                              color: AppColors.textSecondary,
+                              color: AppColors.of(context).textSecondary,
                             ),
                           ),
                         ),
@@ -223,8 +225,8 @@ class _DeveloperDebugScreenState extends ConsumerState<DeveloperDebugScreen> {
                     const SizedBox(height: AppTokens.space8),
                     Row(
                       children: [
-                        const Icon(Icons.memory,
-                            color: AppColors.cyan, size: 20),
+                        Icon(Icons.memory,
+                            color: AppColors.of(context).cyan, size: 20),
                         const SizedBox(width: AppTokens.space8),
                         Expanded(
                           child: Column(
@@ -239,9 +241,9 @@ class _DeveloperDebugScreenState extends ConsumerState<DeveloperDebugScreen> {
                               ),
                               Text(
                                 '${activeProfile.manufacturer} • ${activeProfile.modelNumber}',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 11,
-                                  color: AppColors.textSecondary,
+                                  color: AppColors.of(context).textSecondary,
                                 ),
                               ),
                             ],
@@ -251,15 +253,15 @@ class _DeveloperDebugScreenState extends ConsumerState<DeveloperDebugScreen> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: AppColors.cyan.withValues(alpha: 0.15),
+                            color: AppColors.of(context).cyan.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
                             '${activeProfile.actuators.length} Channels',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
-                              color: AppColors.cyan,
+                              color: AppColors.of(context).cyan,
                             ),
                           ),
                         ),
@@ -271,16 +273,16 @@ class _DeveloperDebugScreenState extends ConsumerState<DeveloperDebugScreen> {
                       runSpacing: 4,
                       children: [
                         if (activeProfile.capabilities.supportsEmergencyStop)
-                          _buildCapabilityBadge('E-STOP', AppColors.crimson),
+                          _buildCapabilityBadge('E-STOP', AppColors.of(context).crimson),
                         if (activeProfile.capabilities.supportsRawPreview)
                           _buildCapabilityBadge(
-                              'RAW PREVIEW', AppColors.amber),
+                              'RAW PREVIEW', AppColors.of(context).amber),
                         if (activeProfile.capabilities.supportsFlashSync)
                           _buildCapabilityBadge(
-                              'FLASH SYNC', AppColors.emerald),
+                              'FLASH SYNC', AppColors.of(context).emerald),
                         if (activeProfile.capabilities.supportsCalibrationJog)
                           _buildCapabilityBadge(
-                              'CALIBRATION JOG', AppColors.cyan),
+                              'CALIBRATION JOG', AppColors.of(context).cyan),
                       ],
                     ),
                   ],
@@ -292,12 +294,12 @@ class _DeveloperDebugScreenState extends ConsumerState<DeveloperDebugScreen> {
 
             // 3. Discovered Robots List
             if (robots.isNotEmpty) ...[
-              const Text(
+              Text(
                 'DISCOVERED ROBOTS',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.textSecondary,
+                  color: AppColors.of(context).textSecondary,
                   letterSpacing: 1.0,
                 ),
               ),
@@ -318,8 +320,8 @@ class _DeveloperDebugScreenState extends ConsumerState<DeveloperDebugScreen> {
                             ? Icons.bluetooth_searching
                             : Icons.bluetooth,
                         color: robot.isPairingMode
-                            ? AppColors.amber
-                            : AppColors.textSecondary,
+                            ? AppColors.of(context).amber
+                            : AppColors.of(context).textSecondary,
                       ),
                       title: Row(
                         children: [
@@ -335,15 +337,15 @@ class _DeveloperDebugScreenState extends ConsumerState<DeveloperDebugScreen> {
                                 vertical: 2,
                               ),
                               decoration: BoxDecoration(
-                                color: AppColors.amber.withValues(alpha: 0.2),
+                                color: AppColors.of(context).amber.withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(4),
                               ),
-                              child: const Text(
+                              child: Text(
                                 'PAIRING MODE ACTIVE',
                                 style: TextStyle(
                                   fontSize: 9,
                                   fontWeight: FontWeight.bold,
-                                  color: AppColors.amber,
+                                  color: AppColors.of(context).amber,
                                 ),
                               ),
                             ),
@@ -387,12 +389,12 @@ class _DeveloperDebugScreenState extends ConsumerState<DeveloperDebugScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'QUICK ACTIONS & SAFETY',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.cyan,
+                        color: AppColors.of(context).cyan,
                         letterSpacing: 0.8,
                       ),
                     ),
@@ -403,7 +405,7 @@ class _DeveloperDebugScreenState extends ConsumerState<DeveloperDebugScreen> {
                           flex: 3,
                           child: ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.crimson,
+                              backgroundColor: AppColors.of(context).crimson,
                               foregroundColor: Colors.white,
                               padding:
                                   const EdgeInsets.symmetric(vertical: 10),
@@ -434,8 +436,8 @@ class _DeveloperDebugScreenState extends ConsumerState<DeveloperDebugScreen> {
                           flex: 2,
                           child: OutlinedButton.icon(
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.amber,
-                              side: const BorderSide(color: AppColors.amber),
+                              foregroundColor: AppColors.of(context).amber,
+                              side: BorderSide(color: AppColors.of(context).amber),
                               padding:
                                   const EdgeInsets.symmetric(vertical: 10),
                             ),
@@ -461,8 +463,8 @@ class _DeveloperDebugScreenState extends ConsumerState<DeveloperDebugScreen> {
                         Expanded(
                           child: ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.surfaceHighlight,
-                              foregroundColor: AppColors.cyan,
+                              backgroundColor: AppColors.of(context).surfaceHighlight,
+                              foregroundColor: AppColors.of(context).cyan,
                             ),
                             onPressed: () async {
                               _addLog('Triggering Preset 1 (0x00 0x01)...');
@@ -481,8 +483,8 @@ class _DeveloperDebugScreenState extends ConsumerState<DeveloperDebugScreen> {
                         Expanded(
                           child: ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.surfaceHighlight,
-                              foregroundColor: AppColors.emerald,
+                              backgroundColor: AppColors.of(context).surfaceHighlight,
+                              foregroundColor: AppColors.of(context).emerald,
                             ),
                             onPressed: () async {
                               _addLog('Triggering Identify (0x0E)...');
@@ -516,13 +518,13 @@ class _DeveloperDebugScreenState extends ConsumerState<DeveloperDebugScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Flexible(
+                        Flexible(
                           child: Text(
                             'LIVE TELEMETRY INSPECTOR (FAB2)',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
-                              color: AppColors.cyan,
+                              color: AppColors.of(context).cyan,
                               letterSpacing: 0.8,
                             ),
                           ),
@@ -532,13 +534,13 @@ class _DeveloperDebugScreenState extends ConsumerState<DeveloperDebugScreen> {
                               horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: metrics.frequencyHz >= 5.0
-                                ? AppColors.cyan.withValues(alpha: 0.2)
-                                : AppColors.surfaceHighlight,
+                                ? AppColors.of(context).cyan.withValues(alpha: 0.2)
+                                : AppColors.of(context).surfaceHighlight,
                             borderRadius: BorderRadius.circular(4),
                             border: Border.all(
                               color: metrics.frequencyHz >= 5.0
-                                  ? AppColors.cyan
-                                  : AppColors.border,
+                                  ? AppColors.of(context).cyan
+                                  : AppColors.of(context).border,
                             ),
                           ),
                           child: Text(
@@ -547,8 +549,8 @@ class _DeveloperDebugScreenState extends ConsumerState<DeveloperDebugScreen> {
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
                               color: metrics.frequencyHz >= 5.0
-                                  ? AppColors.cyan
-                                  : AppColors.textSecondary,
+                                  ? AppColors.of(context).cyan
+                                  : AppColors.of(context).textSecondary,
                             ),
                           ),
                         ),
@@ -556,12 +558,12 @@ class _DeveloperDebugScreenState extends ConsumerState<DeveloperDebugScreen> {
                     ),
                     const SizedBox(height: AppTokens.space8),
                     if (latestPacket == null)
-                      const Padding(
+                      Padding(
                         padding: EdgeInsets.symmetric(vertical: 8),
                         child: Text(
                           'Awaiting telemetry notifications on FAB2...',
                           style: TextStyle(
-                              fontSize: 12, color: AppColors.textMuted),
+                              fontSize: 12, color: AppColors.of(context).textMuted),
                         ),
                       )
                     else ...[
@@ -595,9 +597,9 @@ class _DeveloperDebugScreenState extends ConsumerState<DeveloperDebugScreen> {
                           Expanded(
                             child: Text(
                               'Seq: #${latestPacket.sequenceCounter}  •  Drops: ${metrics.droppedPackets} (${metrics.dropRatePercent.toStringAsFixed(1)}%)',
-                              style: const TextStyle(
+                              style: TextStyle(
                                   fontSize: 11,
-                                  color: AppColors.textSecondary),
+                                  color: AppColors.of(context).textSecondary),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -608,9 +610,9 @@ class _DeveloperDebugScreenState extends ConsumerState<DeveloperDebugScreen> {
                       Container(
                         padding: const EdgeInsets.all(AppTokens.space8),
                         decoration: BoxDecoration(
-                          color: AppColors.background,
+                          color: AppColors.of(context).background,
                           borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: AppColors.border),
+                          border: Border.all(color: AppColors.of(context).border),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -637,13 +639,13 @@ class _DeveloperDebugScreenState extends ConsumerState<DeveloperDebugScreen> {
                         children: [
                           Text(
                             'Heap: ${latestPacket.freeHeapKb} KB',
-                            style: const TextStyle(
-                                fontSize: 11, color: AppColors.textMuted),
+                            style: TextStyle(
+                                fontSize: 11, color: AppColors.of(context).textMuted),
                           ),
                           Text(
                             'RSSI: ${latestPacket.bleRssiDbm} dBm',
-                            style: const TextStyle(
-                                fontSize: 11, color: AppColors.textMuted),
+                            style: TextStyle(
+                                fontSize: 11, color: AppColors.of(context).textMuted),
                           ),
                           Text(
                             'Status: ${latestPacket.lastCmdStatus.name.toUpperCase()}',
@@ -651,8 +653,8 @@ class _DeveloperDebugScreenState extends ConsumerState<DeveloperDebugScreen> {
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
                               color: latestPacket.lastCmdStatus == CmdStatus.ok
-                                  ? AppColors.emerald
-                                  : AppColors.crimson,
+                                  ? AppColors.of(context).emerald
+                                  : AppColors.of(context).crimson,
                             ),
                           ),
                         ],
@@ -672,12 +674,12 @@ class _DeveloperDebugScreenState extends ConsumerState<DeveloperDebugScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'RAW HEX COMMAND INJECTOR (FAB1)',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.cyan,
+                        color: AppColors.of(context).cyan,
                         letterSpacing: 0.8,
                       ),
                     ),
@@ -687,16 +689,16 @@ class _DeveloperDebugScreenState extends ConsumerState<DeveloperDebugScreen> {
                         Expanded(
                           child: TextField(
                             controller: _hexController,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontFamily: 'monospace',
                               fontSize: 14,
-                              color: AppColors.textPrimary,
+                              color: AppColors.of(context).textPrimary,
                             ),
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               hintText:
                                   'e.g. 0E (Identify) or 00 01 (Run P1)',
                               hintStyle: TextStyle(
-                                color: AppColors.textMuted,
+                                color: AppColors.of(context).textMuted,
                                 fontSize: 12,
                               ),
                               isDense: true,
@@ -707,8 +709,8 @@ class _DeveloperDebugScreenState extends ConsumerState<DeveloperDebugScreen> {
                         const SizedBox(width: AppTokens.space8),
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.cyan,
-                            foregroundColor: AppColors.textOnAccent,
+                            backgroundColor: AppColors.of(context).cyan,
+                            foregroundColor: AppColors.of(context).textOnAccent,
                           ),
                           onPressed: _sendHexCommand,
                           child: const Text('SEND'),
@@ -720,19 +722,19 @@ class _DeveloperDebugScreenState extends ConsumerState<DeveloperDebugScreen> {
                       children: [
                         Checkbox(
                           value: _writeWithoutResponse,
-                          activeColor: AppColors.cyan,
+                          activeColor: AppColors.of(context).cyan,
                           onChanged: (val) {
                             setState(() {
                               _writeWithoutResponse = val ?? false;
                             });
                           },
                         ),
-                        const Expanded(
+                        Expanded(
                           child: Text(
                             'Write Without Response (Fast-Path <50ms)',
                             style: TextStyle(
                                 fontSize: 11,
-                                color: AppColors.textSecondary),
+                                color: AppColors.of(context).textSecondary),
                           ),
                         ),
                       ],
@@ -745,12 +747,12 @@ class _DeveloperDebugScreenState extends ConsumerState<DeveloperDebugScreen> {
             const SizedBox(height: AppTokens.space12),
 
             // 6. Dispatch & Event Console Log
-            const Text(
+            Text(
               'PACKET LOG',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
-                color: AppColors.textSecondary,
+                color: AppColors.of(context).textSecondary,
                 letterSpacing: 1.0,
               ),
             ),
@@ -760,16 +762,16 @@ class _DeveloperDebugScreenState extends ConsumerState<DeveloperDebugScreen> {
               child: Container(
                 padding: const EdgeInsets.all(AppTokens.space8),
                 decoration: BoxDecoration(
-                  color: AppColors.background,
+                  color: AppColors.of(context).background,
                   borderRadius: AppTokens.borderRadiusSm,
-                  border: Border.all(color: AppColors.border),
+                  border: Border.all(color: AppColors.of(context).border),
                 ),
                 child: _logs.isEmpty
-                    ? const Center(
+                    ? Center(
                         child: Text(
                           'No packet activity yet. Initiate scan or send hex command.',
                           style: TextStyle(
-                            color: AppColors.textMuted,
+                            color: AppColors.of(context).textMuted,
                             fontSize: 12,
                           ),
                         ),
@@ -783,10 +785,10 @@ class _DeveloperDebugScreenState extends ConsumerState<DeveloperDebugScreen> {
                           final isTx = log.contains('TX ->');
                           final isOk = log.contains('OK:');
 
-                          Color logColor = AppColors.textPrimary;
-                          if (isError) logColor = AppColors.crimson;
-                          if (isTx) logColor = AppColors.cyan;
-                          if (isOk) logColor = AppColors.emerald;
+                          Color logColor = AppColors.of(context).textPrimary;
+                          if (isError) logColor = AppColors.of(context).crimson;
+                          if (isTx) logColor = AppColors.of(context).cyan;
+                          if (isOk) logColor = AppColors.of(context).emerald;
 
                           return Padding(
                             padding:
@@ -804,6 +806,17 @@ class _DeveloperDebugScreenState extends ConsumerState<DeveloperDebugScreen> {
                       ),
               ),
             ),
+
+            const SizedBox(height: AppTokens.space12),
+
+            // 7. Trajectory Strip Chart (Diagnostics)
+            const TelemetryStripChartWidget(
+              config: AirWidgetConfig(
+                type: 'telemetry-strip-chart',
+                title: 'Trajectory Chart',
+                props: {'window_seconds': 10},
+              ),
+            ),
           ],
         ),
       ),
@@ -813,17 +826,17 @@ class _DeveloperDebugScreenState extends ConsumerState<DeveloperDebugScreen> {
   Color _stateColor(BleConnectionState state) {
     switch (state) {
       case BleConnectionState.ready:
-        return AppColors.emerald;
+        return AppColors.of(context).emerald;
       case BleConnectionState.connecting:
       case BleConnectionState.discovering:
       case BleConnectionState.bonding:
       case BleConnectionState.scanning:
-        return AppColors.amber;
+        return AppColors.of(context).amber;
       case BleConnectionState.reconnecting:
-        return AppColors.purple;
+        return AppColors.of(context).purple;
       case BleConnectionState.disconnected:
       default:
-        return AppColors.textMuted;
+        return AppColors.of(context).textMuted;
     }
   }
 
@@ -860,16 +873,16 @@ class _AnglePill extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 10, color: AppColors.textMuted),
+          style: TextStyle(fontSize: 10, color: AppColors.of(context).textMuted),
         ),
         const SizedBox(height: 2),
         Text(
           '$angle°',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.bold,
             fontFamily: 'monospace',
-            color: AppColors.cyan,
+            color: AppColors.of(context).cyan,
           ),
         ),
       ],

@@ -84,7 +84,7 @@ class WidgetRegistry {
 
   Widget _buildFallback(BuildContext context, AirWidgetConfig config) {
     return Card(
-      color: AppColors.surfaceHighlight,
+      color: AppColors.of(context).surfaceHighlight,
       margin: const EdgeInsets.symmetric(vertical: 4),
       child: Padding(
         padding: AppTokens.paddingCard,
@@ -93,14 +93,14 @@ class WidgetRegistry {
           children: [
             Row(
               children: [
-                const Icon(Icons.warning_amber_rounded,
-                    color: AppColors.amber, size: 20),
+                Icon(Icons.warning_amber_rounded,
+                    color: AppColors.of(context).amber, size: 20),
                 const SizedBox(width: AppTokens.space8),
                 Text(
                   'Unsupported Widget: ${config.type}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: AppColors.amber,
+                    color: AppColors.of(context).amber,
                   ),
                 ),
               ],
@@ -109,7 +109,7 @@ class WidgetRegistry {
               const SizedBox(height: AppTokens.space4),
               Text(
                 'Title: ${config.title}',
-                style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                style: TextStyle(fontSize: 12, color: AppColors.of(context).textSecondary),
               ),
             ],
           ],

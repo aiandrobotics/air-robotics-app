@@ -4,7 +4,10 @@ import 'package:hive_flutter/hive_flutter.dart';
 
 import 'core/ble/ble_providers.dart';
 import 'core/ble/ble_transport_interface.dart';
+import 'core/localization/locale_provider.dart';
 import 'core/theme/app_theme.dart';
+import 'core/theme/theme_mode_provider.dart';
+import 'l10n/app_localizations.dart';
 import 'screens/landing_dashboard_screen.dart';
 import 'ui_engine/dynamic_screen_scaffold.dart';
 
@@ -12,19 +15,29 @@ import 'ui_engine/dynamic_screen_scaffold.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
+  await Hive.openBox<String>(LocaleNotifier.boxName);
   runApp(const ProviderScope(child: AirRoboticsApp()));
 }
 // coverage:ignore-end
 
 /// Root widget for the AIR Robotics mobile companion.
-class AirRoboticsApp extends StatelessWidget {
+class AirRoboticsApp extends ConsumerWidget {
   const AirRoboticsApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selectedLocale = ref.watch(localeProvider);
+    final selectedThemeMode = ref.watch(themeModeProvider);
+
     return MaterialApp(
-      title: 'AIR Robotics',
-      theme: AppTheme.darkTheme,
+      onGenerateTitle: (context) =>
+          AppLocalizations.of(context)?.appTitle ?? 'AIR Robotics',
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: selectedThemeMode,
+      locale: selectedLocale,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       debugShowCheckedModeBanner: false,
       home: const AppHomeShell(),
     );

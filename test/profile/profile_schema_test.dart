@@ -37,17 +37,16 @@ void main() {
 
       // Verify presets
       expect(profile.presets.length, equals(4));
-      expect(profile.presets[0].label, equals('Adult T-Shirt'));
-      expect(profile.presets[1].label, equals('Long Sleeve'));
-      expect(profile.presets[2].label, equals('Trousers'));
-      expect(profile.presets[3].label, equals('Towels'));
+      expect(profile.presets[0].label, equals('Button 1'));
+      expect(profile.presets[1].label, equals('Button 2'));
+      expect(profile.presets[2].label, equals('Button 3'));
+      expect(profile.presets[3].label, equals('Button 4'));
 
       // Verify screens
-      expect(profile.screens.length, equals(4));
+      expect(profile.screens.length, equals(3));
       expect(profile.screens[0].title, equals('Control'));
       expect(profile.screens[1].title, equals('Sequencer'));
       expect(profile.screens[2].title, equals('Calibrate'));
-      expect(profile.screens[3].title, equals('Diagnostics'));
     });
 
     test('rejects profile with missing mandatory fields', () {

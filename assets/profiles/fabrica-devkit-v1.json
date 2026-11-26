@@ -65,27 +65,27 @@
   "presets": [
     {
       "id": 1,
-      "label": "Adult T-Shirt",
-      "description": "Standard adult short-sleeve t-shirt fold",
-      "icon": "tshirt"
+      "label": "Button 1",
+      "description": "Adult T-Shirt",
+      "icon": ""
     },
     {
       "id": 2,
-      "label": "Long Sleeve",
-      "description": "Long sleeve shirt and sweater fold",
-      "icon": "sweater"
+      "label": "Button 2",
+      "description": "Long Sleeve",
+      "icon": ""
     },
     {
       "id": 3,
-      "label": "Trousers",
-      "description": "Jeans, slacks and trousers dual-sweep fold",
-      "icon": "pants"
+      "label": "Button 3",
+      "description": "Trousers",
+      "icon": ""
     },
     {
       "id": 4,
-      "label": "Towels",
-      "description": "Bath and kitchen towels compact fold",
-      "icon": "towel"
+      "label": "Button 4",
+      "description": "Towels",
+      "icon": ""
     }
   ],
   "visualizers": [
@@ -128,7 +128,7 @@
       "widgets": [
         {
           "type": "visualizer",
-          "title": "Kinematic Canvas",
+          "title": "Fabrica Arrangement",
           "props": { "visualizer_id": "fabrica-flap-grid" }
         },
         {
@@ -147,23 +147,6 @@
           "type": "jog-slider-bank",
           "title": "Servo Manual Jog",
           "props": { "drag_throttle_ms": 50 }
-        }
-      ]
-    },
-    {
-      "id": "screen_diagnostics",
-      "title": "Diagnostics",
-      "icon": "terminal",
-      "widgets": [
-        {
-          "type": "raw-hex-console",
-          "title": "Packet Console",
-          "props": { "buffer_size": 250 }
-        },
-        {
-          "type": "telemetry-strip-chart",
-          "title": "Trajectory Chart",
-          "props": { "window_seconds": 10 }
         }
       ]
     }

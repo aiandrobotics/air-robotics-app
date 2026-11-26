@@ -82,17 +82,24 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('RUNNING_MOTION'), findsOneWidget);
+      expect(find.text('RUNNING'), findsOneWidget);
       expect(find.text('LED: RUNNING'), findsOneWidget);
       expect(find.text('Strong'), findsOneWidget);
-      expect(find.text('Heap: 198 KB'), findsOneWidget);
+      expect(find.text('Heap: 198 KB'), findsNothing);
       expect(find.text('IDENTIFY'), findsOneWidget);
+      expect(find.text('HOME ALL'), findsOneWidget);
 
       await tester.tap(find.text('IDENTIFY'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
       expect(mockTransport.writtenControlPointPayloads.last, equals([0x0E]));
+
+      await tester.tap(find.text('HOME ALL'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(mockTransport.writtenControlPointPayloads.last, equals([0x02]));
     });
 
     testWidgets('renders fault alert chips when error bitmask is non-zero',
@@ -133,8 +140,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('ESTOP'), findsOneWidget);
-      expect(find.text('LED: ESTOP'), findsOneWidget);
+      expect(find.text('E-STOP'), findsOneWidget);
+      expect(find.text('LED: E-STOP'), findsOneWidget);
       expect(find.text('I2C FAULT'), findsOneWidget);
       expect(find.text('E-STOP LATCHED'), findsOneWidget);
       expect(find.text('STORAGE FAULT'), findsNothing);

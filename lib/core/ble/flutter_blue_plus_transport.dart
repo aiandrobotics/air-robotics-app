@@ -21,6 +21,7 @@ class FlutterBluePlusTransport implements BleTransport {
   final Map<String, BluetoothCharacteristic> _characteristicMap = {};
   StreamSubscription<List<ScanResult>>? _scanSub;
   StreamSubscription<BluetoothConnectionState>? _deviceStateSub;
+  Future<bool>? _inFlightBond;
 
   FlutterBluePlusTransport() {
     _scanSub = FlutterBluePlus.scanResults.listen(_onNativeScanResults);
@@ -144,11 +145,95 @@ class FlutterBluePlusTransport implements BleTransport {
   @override
   Future<bool> createBond() async {
     if (_activeDevice == null) return false;
-    // iOS and Android natively handle SMP Just Works bonding automatically upon
-    // receiving the peripheral's SMP Security Request or when accessing encrypted characteristics.
-    // Concurrently invoking native device.createBond() while the peripheral is initiating SMP
-    // causes the mobile OS to display duplicate system pairing popups.
-    return true;
+    if (defaultTargetPlatform != TargetPlatform.android) {
+      return true;
+    }
+
+    if (_inFlightBond != null) {
+      return _inFlightBond!;
+    }
+
+    _inFlightBond = _performCreateBond();
+    try {
+      return await _inFlightBond!;
+    } finally {
+      _inFlightBond = null;
+    }
+  }
+
+  Future<bool> _performCreateBond() async {
+    final device = _activeDevice;
+    if (device == null) return false;
+
+    // Check current bond state from Android without triggering a duplicate createBond().
+    var currentBond = BluetoothBondState.none;
+    try {
+      currentBond = await device.bondState.first.timeout(
+        const Duration(milliseconds: 500),
+        onTimeout: () => device.prevBondState ?? BluetoothBondState.none,
+      );
+    } catch (_) {}
+
+    if (currentBond == BluetoothBondState.bonded) {
+      return true;
+    }
+
+    // Wait up to 1000ms for peripheral-initiated SMP Security Request
+    // to transition Android into `bonding` before initiating createBond().
+    if (currentBond == BluetoothBondState.none) {
+      try {
+        currentBond = await device.bondState
+            .firstWhere((s) =>
+                s == BluetoothBondState.bonding ||
+                s == BluetoothBondState.bonded)
+            .timeout(const Duration(milliseconds: 1000));
+      } catch (_) {}
+    }
+
+    if (currentBond == BluetoothBondState.bonded) {
+      return true;
+    }
+
+    // If still unbonded and not already bonding, initiate a single explicit
+    // OS bond BEFORE discoverServices() / encrypted GATT reads/CCCD writes.
+    if (currentBond == BluetoothBondState.none) {
+      try {
+        await device.createBond();
+        currentBond = await device.bondState.first.timeout(
+          const Duration(milliseconds: 500),
+          onTimeout: () => device.prevBondState ?? BluetoothBondState.bonded,
+        );
+      } catch (_) {
+        // Re-check bond state in case peripheral-initiated bonding raced with createBond().
+        try {
+          currentBond = await device.bondState.first.timeout(
+            const Duration(milliseconds: 400),
+            onTimeout: () => device.prevBondState ?? BluetoothBondState.none,
+          );
+        } catch (_) {}
+      }
+    }
+
+    if (currentBond == BluetoothBondState.bonded) {
+      return true;
+    }
+
+    // Wait for any active OS pairing dialog (`BluetoothBondState.bonding`) to finish
+    // BEFORE running discoverServices() or encrypted characteristic reads/CCCD writes,
+    // which would otherwise fail with INSUFFICIENT_AUTHENTICATION and trigger a second OS popup.
+    if (currentBond == BluetoothBondState.bonding) {
+      try {
+        final finalState = await device.bondState
+            .firstWhere((s) =>
+                s == BluetoothBondState.bonded || s == BluetoothBondState.none)
+            .timeout(const Duration(seconds: 30));
+        return finalState == BluetoothBondState.bonded;
+      } catch (_) {
+        return false;
+      }
+    }
+
+    return currentBond == BluetoothBondState.bonded;
   }
 
   @override

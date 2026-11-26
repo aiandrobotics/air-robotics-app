@@ -1,10 +1,13 @@
-import 'dart:async';
 import 'package:air_robotics_app/core/ble/ble_providers.dart';
 import 'package:air_robotics_app/core/profile/device_profile.dart';
+import 'package:air_robotics_app/core/profile/profile_providers.dart';
+import 'package:air_robotics_app/core/profile/profile_storage_service.dart';
 import 'package:air_robotics_app/core/protocol/command_pipeline.dart';
 import 'package:air_robotics_app/core/protocol/protocol_providers.dart';
 import 'package:air_robotics_app/core/protocol/telemetry_packet.dart';
+import 'package:air_robotics_app/visualizers/fabrica/fabrica_arrangement_provider.dart';
 import 'package:air_robotics_app/visualizers/fabrica/fabrica_flap_canvas.dart';
+import 'package:air_robotics_app/visualizers/fabrica/sequencer_programming_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -45,14 +48,15 @@ void main() {
       mockTransport.dispose();
     });
 
-    testWidgets('renders title, live badge, and flap angle badges at 0 degrees',
+    testWidgets('renders default 3x4 (4 rows x 3 cols) arrangement without LIVE 60 FPS badge',
         (tester) async {
-      await tester.binding.setSurfaceSize(const Size(600, 800));
+      await tester.binding.setSurfaceSize(const Size(600, 900));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
       final container = ProviderContainer(
         overrides: [
           bleTransportProvider.overrideWithValue(mockTransport),
+          profileStorageProvider.overrideWithValue(InMemoryProfileStorageService()),
           commandPipelineProvider.overrideWithValue(
             CommandPipeline(transport: mockTransport),
           ),
@@ -72,7 +76,7 @@ void main() {
                 child: FabricaFlapVisualizerWidget(
                   config: AirWidgetConfig(
                     type: 'visualizer',
-                    title: 'Kinematic Flap Canvas',
+                    title: 'Fabrica Arrangement',
                   ),
                 ),
               ),
@@ -80,176 +84,312 @@ void main() {
           ),
         ),
       );
-      await tester.pumpAndSettle();
-
-      expect(find.text('KINEMATIC FLAP CANVAS'), findsOneWidget);
-      expect(find.text('LIVE 60 FPS'), findsOneWidget);
-      expect(find.text('LEFT (CH 0)'), findsOneWidget);
-      expect(find.text('RIGHT (CH 1)'), findsOneWidget);
-      expect(find.text('BOTTOM (CH 2)'), findsOneWidget);
-      expect(find.text('TOP (CH 3)'), findsOneWidget);
-      expect(find.text('0°'), findsNWidgets(4));
-      expect(find.byType(CustomPaint), findsWidgets);
-    });
-
-    testWidgets('shows CALIBRATION JOG ON badge when systemState is calibrating',
-        (tester) async {
-      await tester.binding.setSurfaceSize(const Size(600, 800));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-
-      final container = ProviderContainer(
-        overrides: [
-          bleTransportProvider.overrideWithValue(mockTransport),
-          commandPipelineProvider.overrideWithValue(
-            CommandPipeline(transport: mockTransport),
-          ),
-          latestTelemetryProvider.overrideWith(
-            (ref) => Stream.value(
-              makeTestPacket(state: SystemState.calibrating),
-            ),
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: const MaterialApp(
-            home: Scaffold(
-              body: SingleChildScrollView(
-                child: FabricaFlapVisualizerWidget(
-                  config: AirWidgetConfig(
-                    type: 'visualizer',
-                    title: 'Kinematic Flap Canvas',
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('CALIBRATION JOG ON'), findsOneWidget);
-    });
-
-    testWidgets('interpolates and updates flap badges on telemetry stream updates',
-        (tester) async {
-      await tester.binding.setSurfaceSize(const Size(600, 800));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-
-      final streamController = StreamController<TelemetryPacket>.broadcast();
-      addTearDown(streamController.close);
-
-      final container = ProviderContainer(
-        overrides: [
-          bleTransportProvider.overrideWithValue(mockTransport),
-          commandPipelineProvider.overrideWithValue(
-            CommandPipeline(transport: mockTransport),
-          ),
-          latestTelemetryProvider.overrideWith(
-            (ref) => streamController.stream,
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: const MaterialApp(
-            home: Scaffold(
-              body: SingleChildScrollView(
-                child: FabricaFlapVisualizerWidget(
-                  config: AirWidgetConfig(
-                    type: 'visualizer',
-                    title: 'Kinematic Flap Canvas',
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-
-      // Emit initial packet: 0°
-      streamController.add(makeTestPacket(sequence: 1));
-      await tester.pumpAndSettle();
-      expect(find.text('0°'), findsNWidgets(4));
-
-      // Emit new packet with Ch 0 at 175° and Ch 1 at 45°
-      final angles = List<int>.filled(16, 0);
-      angles[0] = 175;
-      angles[1] = 45;
-      streamController.add(makeTestPacket(sequence: 2, channelAngles: angles));
-
-      // Pump 120ms to allow interpolation controller to finish
-      await tester.pump(const Duration(milliseconds: 120));
-      await tester.pumpAndSettle();
-
-      expect(find.text('175°'), findsOneWidget);
-      expect(find.text('45°'), findsOneWidget);
-    });
-
-    testWidgets('handles pan drag gesture and dispatches jog command',
-        (tester) async {
-      await tester.binding.setSurfaceSize(const Size(600, 800));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-
-      final container = ProviderContainer(
-        overrides: [
-          bleTransportProvider.overrideWithValue(mockTransport),
-          commandPipelineProvider.overrideWithValue(
-            CommandPipeline(transport: mockTransport),
-          ),
-          latestTelemetryProvider.overrideWith(
-            (ref) => Stream.value(makeTestPacket(state: SystemState.calibrating)),
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: const MaterialApp(
-            home: Scaffold(
-              body: SingleChildScrollView(
-                child: FabricaFlapVisualizerWidget(
-                  config: AirWidgetConfig(
-                    type: 'visualizer',
-                    title: 'Kinematic Flap Canvas',
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // Find the interactive GestureDetector on the canvas
-      final gestureFinder = find.byType(GestureDetector).first;
-      expect(gestureFinder, findsOneWidget);
-
-      // Touch drag on the left flap area
-      // Canvas center is (width/2, 120) relative to canvas top-left
-      final canvasOrigin = tester.getTopLeft(gestureFinder);
-      final leftFlapPos = canvasOrigin + const Offset(120, 120);
-
-      final gesture = await tester.startGesture(leftFlapPos);
       await tester.pump();
-      await gesture.moveBy(const Offset(30, 0));
-      await tester.pump(const Duration(milliseconds: 60));
-      await gesture.up();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('FABRICA ARRANGEMENT'), findsOneWidget);
+      expect(find.text('LIVE 60 FPS'), findsNothing);
+      expect(find.text('12/32 • 4/16 M'), findsNothing);
+      expect(find.text('EDIT ARRANGEMENT'), findsOneWidget);
+      expect(find.text('ADD PANEL'), findsNothing);
+      expect(find.text('3/6'), findsNothing);
+      expect(find.text('4/6'), findsNothing);
+      expect(find.text('CONTROLLER'), findsOneWidget);
+      expect(find.text('1'), findsAtLeastNWidgets(1));
+      expect(find.text('2'), findsAtLeastNWidgets(1));
+      expect(find.text('3'), findsAtLeastNWidgets(1));
+      expect(find.text('4'), findsAtLeastNWidgets(1));
+
+      // Default 3x4 grid (4 rows x 3 cols) has panels numbered #1..#12 starting from top
+      for (int i = 1; i <= 12; i++) {
+        expect(find.text('#$i'), findsOneWidget);
+      }
+
+      // Default panel config: 6 motorized (#1,6,7,8,11,12), 2 base (#2,5), 4 follower (#3,4,9,10)
+      final arr = container.read(fabricaArrangementProvider);
+      expect(arr.motorizedCount, equals(6));
+      for (final p in arr.panels) {
+        final num = arr.flapNumberForPanel(p.id);
+        if ({1, 6, 7, 8, 11, 12}.contains(num)) {
+          expect(p.type, equals(FabricaPanelType.motorized));
+        } else if ({2, 5}.contains(num)) {
+          expect(p.type, equals(FabricaPanelType.base));
+        } else {
+          expect(p.type, equals(FabricaPanelType.follower));
+        }
+      }
+
+      // Tapping motorized panel #6 while Step 1 ([0]) is selected adds Ch 2 (Channel 3, 2 motors max)
+      await tester.tap(find.text('#6'));
+      await tester.pump();
+      expect(container.read(sequencerProgrammingProvider).draftSteps[0], equals([0, 2]));
+
+      // Add empty Step 5 and tap #1 then #6 to populate it; tapping #7 is blocked at max 2
+      container.read(sequencerProgrammingProvider.notifier).addEmptyStep();
+      await tester.pump();
+      await tester.tap(find.text('#1'));
+      await tester.pump();
+      await tester.tap(find.text('#6'));
+      await tester.pump();
+      await tester.tap(find.text('#7'));
+      await tester.pump();
+      final steps = container.read(sequencerProgrammingProvider).steps;
+      expect(steps.length, equals(5));
+      expect(steps.last.motorCount, equals(2));
+
+      // Open Edit Arrangement screen and expand columns/rows up to 6x6 max
+      await tester.tap(find.text('EDIT ARRANGEMENT'));
       await tester.pumpAndSettle();
 
-      // Check if command was dispatched to transport
-      final written = mockTransport.writtenControlPointPayloads;
-      expect(written.isNotEmpty, isTrue);
-      // Jog motor opcode is 0x0D (BleOpcode.jogMotorAngle)
-      expect(written.first[0], 0x0D);
+      expect(find.text('Edit Fabrica Arrangement'), findsOneWidget);
+      expect(find.text('ADD PANEL'), findsOneWidget);
+      expect(find.text('3/6'), findsOneWidget);
+      expect(find.text('4/6'), findsOneWidget);
+
+      for (int c = 3; c < 6; c++) {
+        await tester.tap(find.byTooltip('Add Column (Max 6)'));
+        await tester.pump();
+      }
+      for (int r = 4; r < 6; r++) {
+        await tester.tap(find.byTooltip('Add Row (Max 6)'));
+        await tester.pump();
+      }
+      expect(find.text('6/6'), findsNWidgets(2));
+    });
+
+    testWidgets('adds panels of 3 types and enforces 32 total / 16 motorized',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(600, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final container = ProviderContainer(
+        overrides: [
+          bleTransportProvider.overrideWithValue(mockTransport),
+          profileStorageProvider.overrideWithValue(InMemoryProfileStorageService()),
+          commandPipelineProvider.overrideWithValue(
+            CommandPipeline(transport: mockTransport),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: FabricaFlapVisualizerWidget(
+                  config: AirWidgetConfig(
+                    type: 'visualizer',
+                    title: 'Fabrica Arrangement',
+                  ),
+                  isEditable: true,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // Add a Motorized Assembly via UI
+      await tester.tap(find.text('ADD PANEL'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(find.text('Motorized Assembly'), findsOneWidget);
+      expect(find.text('Follower Assembly'), findsOneWidget);
+      expect(find.text('Base Assembly'), findsOneWidget);
+
+      await tester.tap(find.text('Motorized Assembly'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(container.read(fabricaArrangementProvider).totalCount, equals(13));
+      expect(container.read(fabricaArrangementProvider).motorizedCount, equals(7));
+      expect(find.text('#13'), findsOneWidget);
+
+      // Verify notifier limits: max 16 motorized, max 32 total
+      final notifier = container.read(fabricaArrangementProvider.notifier);
+      for (int i = 0; i < 9; i++) {
+        expect(notifier.addPanel(FabricaPanelType.motorized), isNull);
+      }
+      // 17th motorized should fail
+      expect(notifier.addPanel(FabricaPanelType.motorized), isNotNull);
+
+      // Fill remaining up to 32 with base assemblies
+      while (container.read(fabricaArrangementProvider).totalCount < 32) {
+        expect(notifier.addPanel(FabricaPanelType.base), isNull);
+      }
+      // 33rd total panel should fail
+      expect(notifier.addPanel(FabricaPanelType.follower), isNotNull);
+    });
+
+    testWidgets('selects panel to resize, change type, and remove',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(600, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final container = ProviderContainer(
+        overrides: [
+          bleTransportProvider.overrideWithValue(mockTransport),
+          profileStorageProvider.overrideWithValue(InMemoryProfileStorageService()),
+          commandPipelineProvider.overrideWithValue(
+            CommandPipeline(transport: mockTransport),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: FabricaFlapVisualizerWidget(
+                  config: AirWidgetConfig(
+                    type: 'visualizer',
+                    title: 'Fabrica Arrangement',
+                  ),
+                  isEditable: true,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // Tap panel #3 (Follower)
+      await tester.tap(find.text('#3'));
+      await tester.pump();
+
+      expect(find.text('FLAP #3 • FOLLOWER ASSEMBLY'), findsOneWidget);
+      expect(find.text('REMOVE'), findsOneWidget);
+
+      // Remove panel #3 -> total drops to 11
+      await tester.tap(find.text('REMOVE'));
+      await tester.pump();
+
+      expect(container.read(fabricaArrangementProvider).totalCount, equals(11));
+
+      // Removing a column with panels prompts confirmation and deletes panels in that column
+      await tester.tap(find.byTooltip('Remove Column'));
+      await tester.pumpAndSettle();
+      expect(find.text('Remove Column 3?'), findsOneWidget);
+      await tester.tap(find.text('DELETE & REMOVE'));
+      await tester.pumpAndSettle();
+      expect(container.read(fabricaArrangementProvider).gridColumns, equals(2));
+      expect(container.read(fabricaArrangementProvider).totalCount, equals(8));
+
+      // Verify removing a panel does NOT rearrange other panels' (row, col)
+      final notifier = container.read(fabricaArrangementProvider.notifier);
+      final panel7Before = container
+          .read(fabricaArrangementProvider)
+          .panels
+          .firstWhere((p) => p.id == 7);
+      expect(panel7Before.row, equals(1));
+      expect(panel7Before.col, equals(0));
+
+      // Remove panel #1 (bottom-left at (3, 0)) -> panel #7 must stay at (1, 0)
+      notifier.removePanel(1);
+      final panel7After = container
+          .read(fabricaArrangementProvider)
+          .panels
+          .firstWhere((p) => p.id == 7);
+      expect(panel7After.row, equals(1));
+      expect(panel7After.col, equals(0));
+
+      // Move panel #7 into the empty (3, 0) slot
+      notifier.movePanelToCell(7, 3, 0);
+      final panel7Moved = container
+          .read(fabricaArrangementProvider)
+          .panels
+          .firstWhere((p) => p.id == 7);
+      expect(panel7Moved.row, equals(3));
+      expect(panel7Moved.col, equals(0));
+    });
+
+    testWidgets(
+        'motor panel bottom editor shows all channels (1-16) and swaps when selecting an assigned channel',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(600, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final container = ProviderContainer(
+        overrides: [
+          bleTransportProvider.overrideWithValue(mockTransport),
+          profileStorageProvider
+              .overrideWithValue(InMemoryProfileStorageService()),
+          commandPipelineProvider.overrideWithValue(
+            CommandPipeline(transport: mockTransport),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: FabricaFlapVisualizerWidget(
+                  config: AirWidgetConfig(
+                    type: 'visualizer',
+                    title: 'Fabrica Arrangement',
+                  ),
+                  isEditable: true,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // Default arrangement: panel #1 has Channel 1 (0), panel #7 has Channel 2 (1).
+      // Tap motor panel #1 (Channel 1).
+      await tester.tap(find.text('#1'));
+      await tester.pump();
+
+      final dropdownFinder = find.byKey(const Key('motor_channel_dropdown'));
+      expect(dropdownFinder, findsOneWidget);
+
+      // Open dropdown menu
+      await tester.tap(dropdownFinder);
+      await tester.pumpAndSettle();
+
+      // All channels 1..16 are present in the dropdown (Channel 2 & Channel 10 visible)
+      expect(find.text('Channel 2'), findsWidgets);
+      expect(find.text('Channel 16'), findsWidgets);
+
+      // Select Channel 2 (already assigned to panel #7) -> should swap channels!
+      await tester.tap(find.text('Channel 2').last);
+      await tester.pumpAndSettle();
+
+      final panelsAfterSwap = container.read(fabricaArrangementProvider).panels;
+      final panel1AfterSwap = panelsAfterSwap.firstWhere((p) => p.id == 1);
+      final panel7AfterSwap = panelsAfterSwap.firstWhere((p) => p.id == 7);
+      expect(panel1AfterSwap.motorChannel, equals(1));
+      expect(panel7AfterSwap.motorChannel, equals(0));
+
+      // Selecting an unassigned channel (Channel 10 -> 9) updates panel #1
+      await tester.tap(dropdownFinder);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Channel 10').last);
+      await tester.pumpAndSettle();
+
+      final panel1AfterUnused = container
+          .read(fabricaArrangementProvider)
+          .panels
+          .firstWhere((p) => p.id == 1);
+      expect(panel1AfterUnused.motorChannel, equals(9));
     });
   });
 }

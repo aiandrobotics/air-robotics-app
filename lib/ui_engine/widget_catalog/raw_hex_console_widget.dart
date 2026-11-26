@@ -123,16 +123,16 @@ class _RawHexConsoleWidgetState extends ConsumerState<RawHexConsoleWidget> {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.terminal, color: AppColors.cyan, size: 20),
+                    Icon(Icons.terminal, color: AppColors.of(context).cyan, size: 20),
                     const SizedBox(width: AppTokens.space8),
                     Text(
                       widget.config.title.isNotEmpty
                           ? widget.config.title.toUpperCase()
                           : 'PACKET CONSOLE (FAB1 / FAB2)',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.cyan,
+                        color: AppColors.of(context).cyan,
                         letterSpacing: 0.8,
                       ),
                     ),
@@ -156,13 +156,13 @@ class _RawHexConsoleWidgetState extends ConsumerState<RawHexConsoleWidget> {
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: metrics.frequencyHz >= 5.0
-                        ? AppColors.cyan.withValues(alpha: 0.15)
-                        : AppColors.surfaceHighlight,
+                        ? AppColors.of(context).cyan.withValues(alpha: 0.15)
+                        : AppColors.of(context).surfaceHighlight,
                     borderRadius: BorderRadius.circular(4),
                     border: Border.all(
                       color: metrics.frequencyHz >= 5.0
-                          ? AppColors.cyan
-                          : AppColors.border,
+                          ? AppColors.of(context).cyan
+                          : AppColors.of(context).border,
                     ),
                   ),
                   child: Text(
@@ -171,8 +171,8 @@ class _RawHexConsoleWidgetState extends ConsumerState<RawHexConsoleWidget> {
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
                       color: metrics.frequencyHz >= 5.0
-                          ? AppColors.cyan
-                          : AppColors.textSecondary,
+                          ? AppColors.of(context).cyan
+                          : AppColors.of(context).textSecondary,
                     ),
                   ),
                 ),
@@ -181,13 +181,13 @@ class _RawHexConsoleWidgetState extends ConsumerState<RawHexConsoleWidget> {
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: metrics.droppedPackets > 0
-                        ? AppColors.crimson.withValues(alpha: 0.15)
-                        : AppColors.surfaceHighlight,
+                        ? AppColors.of(context).crimson.withValues(alpha: 0.15)
+                        : AppColors.of(context).surfaceHighlight,
                     borderRadius: BorderRadius.circular(4),
                     border: Border.all(
                       color: metrics.droppedPackets > 0
-                          ? AppColors.crimson
-                          : AppColors.border,
+                          ? AppColors.of(context).crimson
+                          : AppColors.of(context).border,
                     ),
                   ),
                   child: Text(
@@ -196,17 +196,17 @@ class _RawHexConsoleWidgetState extends ConsumerState<RawHexConsoleWidget> {
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
                       color: metrics.droppedPackets > 0
-                          ? AppColors.crimson
-                          : AppColors.textSecondary,
+                          ? AppColors.of(context).crimson
+                          : AppColors.of(context).textSecondary,
                     ),
                   ),
                 ),
                 const SizedBox(width: AppTokens.space8),
                 Text(
                   'Total: ${metrics.totalPackets}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
-                    color: AppColors.textMuted,
+                    color: AppColors.of(context).textMuted,
                     fontFamily: 'monospace',
                   ),
                 ),
@@ -221,16 +221,18 @@ class _RawHexConsoleWidgetState extends ConsumerState<RawHexConsoleWidget> {
               width: double.infinity,
               padding: const EdgeInsets.all(AppTokens.space8),
               decoration: BoxDecoration(
-                color: Colors.black,
+                color: AppColors.of(context).isDark
+                    ? Colors.black
+                    : AppColors.of(context).surfaceHighlight,
                 borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: AppColors.border),
+                border: Border.all(color: AppColors.of(context).border),
               ),
               child: _logLines.isEmpty
-                  ? const Center(
+                  ? Center(
                       child: Text(
                         'Awaiting telemetry notifications or hex commands...',
                         style: TextStyle(
-                          color: AppColors.textMuted,
+                          color: AppColors.of(context).textMuted,
                           fontSize: 11,
                           fontFamily: 'monospace',
                         ),
@@ -245,10 +247,10 @@ class _RawHexConsoleWidgetState extends ConsumerState<RawHexConsoleWidget> {
                         final isErr = line.contains('ERR:');
                         final isOk = line.contains('OK:');
 
-                        Color color = AppColors.textSecondary;
-                        if (isTx) color = AppColors.cyan;
-                        if (isErr) color = AppColors.crimson;
-                        if (isOk) color = AppColors.emerald;
+                        Color color = AppColors.of(context).textSecondary;
+                        if (isTx) color = AppColors.of(context).cyan;
+                        if (isErr) color = AppColors.of(context).crimson;
+                        if (isOk) color = AppColors.of(context).emerald;
 
                         return Text(
                           line,
@@ -270,7 +272,7 @@ class _RawHexConsoleWidgetState extends ConsumerState<RawHexConsoleWidget> {
               runSpacing: 6,
               children: [
                 ActionChip(
-                  avatar: const Icon(Icons.camera_alt_outlined, size: 14, color: AppColors.cyan),
+                  avatar: Icon(Icons.camera_alt_outlined, size: 14, color: AppColors.of(context).cyan),
                   label: const Text('SNAPSHOT', style: TextStyle(fontSize: 10)),
                   onPressed: () async {
                     _addLog('Requesting telemetry snapshot...');
@@ -285,7 +287,7 @@ class _RawHexConsoleWidgetState extends ConsumerState<RawHexConsoleWidget> {
                   avatar: Icon(
                     isStreamActive ? Icons.pause : Icons.play_arrow,
                     size: 14,
-                    color: isStreamActive ? AppColors.amber : AppColors.emerald,
+                    color: isStreamActive ? AppColors.of(context).amber : AppColors.of(context).emerald,
                   ),
                   label: Text(
                     isStreamActive ? 'PAUSE STREAM' : 'RESUME STREAM',
@@ -303,7 +305,7 @@ class _RawHexConsoleWidgetState extends ConsumerState<RawHexConsoleWidget> {
                   },
                 ),
                 ActionChip(
-                  avatar: const Icon(Icons.flare, size: 14, color: AppColors.purple),
+                  avatar: Icon(Icons.flare, size: 14, color: AppColors.of(context).purple),
                   label: const Text('IDENTIFY', style: TextStyle(fontSize: 10)),
                   onPressed: () async {
                     _addLog('Flashing robot LED for 3 seconds...');
@@ -315,7 +317,7 @@ class _RawHexConsoleWidgetState extends ConsumerState<RawHexConsoleWidget> {
                   },
                 ),
                 ActionChip(
-                  avatar: const Icon(Icons.sync, size: 14, color: AppColors.cyan),
+                  avatar: Icon(Icons.sync, size: 14, color: AppColors.of(context).cyan),
                   label: const Text('SYNC ROUTINES', style: TextStyle(fontSize: 10)),
                   onPressed: () async {
                     _addLog('Syncing routine table from robot...');
@@ -335,23 +337,23 @@ class _RawHexConsoleWidgetState extends ConsumerState<RawHexConsoleWidget> {
             Container(
               padding: const EdgeInsets.all(AppTokens.space12),
               decoration: BoxDecoration(
-                color: AppColors.surfaceHighlight,
+                color: AppColors.of(context).surfaceHighlight,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppColors.border),
+                border: Border.all(color: AppColors.of(context).border),
               ),
-              child: const Column(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.info_outline, size: 14, color: AppColors.cyan),
+                      Icon(Icons.info_outline, size: 14, color: AppColors.of(context).cyan),
                       SizedBox(width: 6),
                       Text(
                         'DEVICE INFORMATION',
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
-                          color: AppColors.cyan,
+                          color: AppColors.of(context).cyan,
                           letterSpacing: 0.5,
                         ),
                       ),
@@ -361,7 +363,7 @@ class _RawHexConsoleWidgetState extends ConsumerState<RawHexConsoleWidget> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Model Number:', style: TextStyle(fontSize: 10, color: AppColors.textMuted)),
+                      Text('Model Number:', style: TextStyle(fontSize: 10, color: AppColors.of(context).textMuted)),
                       Text('Fabrica', style: TextStyle(fontSize: 10, fontFamily: 'monospace', fontWeight: FontWeight.bold)),
                     ],
                   ),
@@ -369,15 +371,15 @@ class _RawHexConsoleWidgetState extends ConsumerState<RawHexConsoleWidget> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Firmware Revision:', style: TextStyle(fontSize: 10, color: AppColors.textMuted)),
-                      Text('v1.13.0', style: TextStyle(fontSize: 10, fontFamily: 'monospace', fontWeight: FontWeight.bold, color: AppColors.emerald)),
+                      Text('Firmware Revision:', style: TextStyle(fontSize: 10, color: AppColors.of(context).textMuted)),
+                      Text('v1.13.0', style: TextStyle(fontSize: 10, fontFamily: 'monospace', fontWeight: FontWeight.bold, color: AppColors.of(context).emerald)),
                     ],
                   ),
                   SizedBox(height: 2),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Manufacturer Name:', style: TextStyle(fontSize: 10, color: AppColors.textMuted)),
+                      Text('Manufacturer Name:', style: TextStyle(fontSize: 10, color: AppColors.of(context).textMuted)),
                       Text('AIR Robotics', style: TextStyle(fontSize: 10, fontFamily: 'monospace', fontWeight: FontWeight.bold)),
                     ],
                   ),
@@ -409,8 +411,8 @@ class _RawHexConsoleWidgetState extends ConsumerState<RawHexConsoleWidget> {
                 ElevatedButton(
                   onPressed: _sendHexCommand,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.cyan,
-                    foregroundColor: Colors.black,
+                    backgroundColor: AppColors.of(context).cyan,
+                    foregroundColor: AppColors.of(context).textOnAccent,
                   ),
                   child: const Text('SEND'),
                 ),

@@ -77,10 +77,12 @@ class BleConnectionManager {
 
       // 2. SMP "Just Works" LE Secure Connections bonding
       _updateState(BleConnectionState.bonding);
-      try {
-        await transport.createBond();
-      } catch (_) {
-        // Bonding prompt might already be satisfied or handled by OS
+      final bonded = await transport.createBond();
+      if (!bonded) {
+        _manualDisconnect = true;
+        await transport.disconnect();
+        _updateState(BleConnectionState.disconnected);
+        throw StateError('Bluetooth pairing was cancelled or did not complete');
       }
 
       // 3. Discover DIS & AIR Robotics GATT services

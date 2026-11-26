@@ -52,20 +52,56 @@ final commandPipelineProvider = Provider<CommandPipeline>((ref) {
 });
 
 /// Stream of live synchronized [ButtonConfigTable] button routines from FAB3.
-final buttonConfigProvider = StreamProvider.autoDispose<ButtonConfigTable>((ref) {
+final buttonConfigProvider = StreamProvider.autoDispose<ButtonConfigTable>((ref) async* {
   final transport = ref.watch(bleTransportProvider);
   final connState = ref.watch(bleConnectionStateProvider).value ??
       BleConnectionState.disconnected;
 
   if (connState != BleConnectionState.ready) {
-    return const Stream.empty();
+    return;
   }
 
-  return transport
+  try {
+    final initial = await transport.readCharacteristic(BleUuids.charButtonConfig);
+    if (initial.length >= ButtonConfigTable.totalBytes) {
+      yield ButtonConfigTable.fromBytes(initial);
+    }
+  } catch (_) {
+    // Fallback to notifications if initial read is unsupported
+  }
+
+  yield* transport
       .subscribeCharacteristic(BleUuids.charButtonConfig)
       .where((bytes) => bytes.length >= ButtonConfigTable.totalBytes)
       .map((bytes) => ButtonConfigTable.fromBytes(bytes));
 });
+
+/// Caches modified button routines saved in-session so the routine builder
+/// immediately reflects newly saved presets even before a FAB3 notification.
+class SavedButtonRoutinesNotifier extends Notifier<Map<int, FoldRoutine>> {
+  @override
+  Map<int, FoldRoutine> build() {
+    ref.listen<AsyncValue<BleConnectionState>>(bleConnectionStateProvider, (prev, next) {
+      if (next.value == BleConnectionState.disconnected) {
+        state = const {};
+      }
+    });
+    return const {};
+  }
+
+  void setRoutine(int slot, FoldRoutine routine) {
+    state = {...state, slot: routine};
+  }
+
+  void clear() {
+    state = const {};
+  }
+}
+
+final savedButtonRoutinesProvider =
+    NotifierProvider<SavedButtonRoutinesNotifier, Map<int, FoldRoutine>>(
+  SavedButtonRoutinesNotifier.new,
+);
 
 /// Tracks whether telemetry streaming from the robot is actively enabled or paused (Opcode 0x11).
 class TelemetryStreamActiveNotifier extends Notifier<bool> {
