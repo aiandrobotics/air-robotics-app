@@ -84,10 +84,11 @@ void main() {
       // Check App Bar metadata
       expect(find.text('Fabrica Cloth Folding Robot'), findsOneWidget);
 
-      // Check Bottom Navigation Destinations (only Control, Sequencer, Calibrate)
+      // Check Bottom Navigation Destinations (Control, Sequencer, Arrangement)
       expect(find.text('Control'), findsWidgets);
       expect(find.text('Sequencer'), findsWidgets);
-      expect(find.text('Calibrate'), findsWidgets);
+      expect(find.text('Arrangement'), findsWidgets);
+      expect(find.text('Calibrate'), findsNothing);
       expect(find.text('Diagnostics'), findsNothing);
 
       // Header should only have the 3-dot menu, not individual action icons
@@ -100,23 +101,51 @@ void main() {
       expect(find.text('FOLDING PRESETS'), findsOneWidget);
       expect(find.text('EMERGENCY STOP'), findsOneWidget);
 
-      // Switch to Screen 2: Calibrate
-      await tester.tap(find.text('Calibrate').last);
+      // Switch to Screen 1: Sequencer (Option A fixed split workspace)
+      await tester.tap(find.text('Sequencer').last);
       await tester.pumpAndSettle();
 
+      expect(find.byKey(const Key('sequencer_button_1')), findsOneWidget);
+      expect(find.byKey(const Key('sequencer_compact_flap_map')), findsOneWidget);
+      expect(find.byKey(const Key('sequencer_steps_scroll_view')), findsOneWidget);
+      expect(find.byKey(const Key('sequencer_pinned_action_bar')), findsOneWidget);
+      expect(find.text('EDIT ARRANGEMENT'), findsNothing);
+      expect(find.text('CONTROLLER'), findsNothing);
+      // Button bar appears above the compact flap map
+      final btn1Y =
+          tester.getTopLeft(find.byKey(const Key('sequencer_button_1'))).dy;
+      final mapY = tester
+          .getTopLeft(find.byKey(const Key('sequencer_compact_flap_map')))
+          .dy;
+      expect(btn1Y, lessThan(mapY));
+
+      // Switch to Screen 2: Arrangement (directly editable board layout)
+      await tester.tap(find.text('Arrangement').last);
+      await tester.pumpAndSettle();
+
+      expect(find.text('FABRICA ARRANGEMENT'), findsOneWidget);
+      expect(find.text('ADD PANEL'), findsOneWidget);
+      expect(find.text('3/6'), findsOneWidget);
+      expect(find.text('4/6'), findsOneWidget);
+
+      // Open 3-dot menu and navigate to Debug Panel (Diagnostics + Calibrate)
+      await tester.tap(find.byTooltip('More Hardware Options'));
+      await tester.pumpAndSettle();
+      expect(find.text('Edit Fabrica Arrangement'), findsNothing);
+      await tester.tap(find.text('Debug Panel'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(DeveloperDebugScreen), findsOneWidget);
+      expect(find.text('Debug Panel'), findsOneWidget);
+
+      // Switch to Calibrate tab inside Debug Panel
+      await tester.tap(find.text('Calibrate'));
+      await tester.pumpAndSettle();
       expect(find.text('SERVO MANUAL JOG'), findsOneWidget);
       expect(find.text('Channel 1'), findsOneWidget);
       expect(find.text('Channel 2'), findsOneWidget);
       expect(find.text('#1'), findsOneWidget);
       expect(find.text('#7'), findsOneWidget);
-
-      // Open 3-dot menu and navigate to unified Diagnostics & Debugger page
-      await tester.tap(find.byTooltip('More Hardware Options'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Diagnostics & Debugger'));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(DeveloperDebugScreen), findsOneWidget);
     });
 
     testWidgets('back button updates isViewingDevice to false', (tester) async {
@@ -491,11 +520,11 @@ void main() {
       expect(find.text('Disconnect'), findsOneWidget);
       expect(find.text('Unpair Robot'), findsOneWidget);
       expect(find.text('Fabrica Factory Reset'), findsOneWidget);
-      expect(find.text('Diagnostics & Debugger'), findsOneWidget);
+      expect(find.text('Debug Panel'), findsOneWidget);
 
-      // Diagnostics & Debugger is at the end of the 3-dot menu
+      // Debug Panel is at the end of the 3-dot menu
       final factoryResetY = tester.getTopLeft(find.text('Fabrica Factory Reset')).dy;
-      final diagnosticsY = tester.getTopLeft(find.text('Diagnostics & Debugger')).dy;
+      final diagnosticsY = tester.getTopLeft(find.text('Debug Panel')).dy;
       expect(diagnosticsY, greaterThan(factoryResetY));
 
       await tester.tap(find.text('Rename Robot'));

@@ -74,7 +74,11 @@ class WidgetRegistry {
     });
 
     register('visualizer', (context, config, ref) {
-      return FabricaFlapVisualizerWidget(config: config);
+      final isEditable = config.props['editable'] == true;
+      return FabricaFlapVisualizerWidget(
+        config: config,
+        isEditable: isEditable,
+      );
     });
 
     register('timeline-sequencer', (context, config, ref) {

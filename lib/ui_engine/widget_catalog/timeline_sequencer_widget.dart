@@ -11,16 +11,30 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../visualizers/fabrica/fabrica_arrangement_provider.dart';
+import '../../visualizers/fabrica/fabrica_flap_canvas.dart';
 import '../../visualizers/fabrica/sequencer_programming_provider.dart';
 
 enum _UnsavedSwitchAction { cancel, discard, saveAndSwitch }
 
 /// Multi-step folding timeline editor, stateless RAM previewer,
 /// and direct NVS flash button programming interface for Fabrica.
+///
+/// When [fillViewport] is true (used in [DynamicScreenScaffold]'s Sequencer tab),
+/// renders a fixed split workspace:
+/// - Pinned top: 1×4 button selector (+ template menu) and optional compact flap map
+/// - Scrollable middle: folding steps list + Add Step button
+/// - Pinned bottom: Preview on Robot and 1-tap Save to Button N
 class TimelineSequencerWidget extends ConsumerStatefulWidget {
   final AirWidgetConfig config;
+  final bool showEmbeddedFlapMap;
+  final bool fillViewport;
 
-  const TimelineSequencerWidget({super.key, required this.config});
+  const TimelineSequencerWidget({
+    super.key,
+    required this.config,
+    this.showEmbeddedFlapMap = false,
+    this.fillViewport = false,
+  });
 
   @override
   ConsumerState<TimelineSequencerWidget> createState() =>
@@ -29,6 +43,7 @@ class TimelineSequencerWidget extends ConsumerStatefulWidget {
 
 class _TimelineSequencerWidgetState
     extends ConsumerState<TimelineSequencerWidget> {
+  final ScrollController _stepsScrollController = ScrollController();
   bool _isBusy = false;
   int _loadRequestId = 0;
   String? _statusMessage;
@@ -46,6 +61,12 @@ class _TimelineSequencerWidgetState
         _loadButtonRoutine(seqState.selectedButtonId, silent: true);
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _stepsScrollController.dispose();
+    super.dispose();
   }
 
   Map<int, int> _moduleNumbersForArrangement(
@@ -92,6 +113,22 @@ class _TimelineSequencerWidgetState
       _statusMessage = message;
       _statusColor = color ?? AppColors.of(context).cyan;
     });
+  }
+
+  void _addStep() {
+    final added = ref
+        .read(sequencerProgrammingProvider.notifier)
+        .addEmptyStep(maxSteps: FoldRoutine.maxSteps);
+    if (added && widget.fillViewport) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !_stepsScrollController.hasClients) return;
+        _stepsScrollController.animateTo(
+          _stepsScrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOut,
+        );
+      });
+    }
   }
 
   void _removeStep(int index) {
@@ -198,9 +235,10 @@ class _TimelineSequencerWidgetState
     final currentSlot = seqState.selectedButtonId;
     final currentName =
         _buttonDisplayName(currentSlot, presetsById, customNames, l10n);
-    final currentTitle = currentName == (l10n?.buttonNumber(currentSlot) ?? 'Button $currentSlot')
-        ? 'Button $currentSlot'
-        : 'Button $currentSlot ($currentName)';
+    final currentTitle =
+        currentName == (l10n?.buttonNumber(currentSlot) ?? 'Button $currentSlot')
+            ? 'Button $currentSlot'
+            : 'Button $currentSlot ($currentName)';
 
     final action = await showDialog<_UnsavedSwitchAction>(
       context: context,
@@ -284,7 +322,8 @@ class _TimelineSequencerWidgetState
 
   void _loadTemplate(String templateName) {
     final notifier = ref.read(sequencerProgrammingProvider.notifier);
-    final selectedSlot = ref.read(sequencerProgrammingProvider).selectedButtonId;
+    final selectedSlot =
+        ref.read(sequencerProgrammingProvider).selectedButtonId;
     final l10n = AppLocalizations.of(context);
     final nextSteps = <FoldStep>[];
     String templateLabel = templateName;
@@ -404,6 +443,433 @@ class _TimelineSequencerWidgetState
     }
   }
 
+  Widget _buildHeaderRow(
+    BuildContext context,
+    AppLocalizations? l10n,
+    SequencerProgrammingState seqState,
+  ) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Expanded(
+          child: Row(
+            children: [
+              Icon(Icons.tune, color: AppColors.of(context).cyan, size: 18),
+              const SizedBox(width: AppTokens.space8),
+              Flexible(
+                child: Text(
+                  l10n?.foldingTimeline ??
+                      (widget.config.title.isNotEmpty
+                          ? widget.config.title.toUpperCase()
+                          : 'TIMELINE SEQUENCER'),
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.of(context).cyan,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+              ),
+              if (seqState.isDirty) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.of(context).amber.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(
+                      color: AppColors.of(context).amber.withValues(alpha: 0.6),
+                    ),
+                  ),
+                  child: Text(
+                    'UNSAVED',
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
+                      color: AppColors.of(context).amber,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        PopupMenuButton<String>(
+          tooltip: l10n?.loadTemplate ?? 'Load Template',
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          icon: const Icon(Icons.more_vert, size: 20),
+          onSelected: _loadTemplate,
+          itemBuilder: (context) {
+            final menuL10n = AppLocalizations.of(context);
+            return [
+              PopupMenuItem(
+                value: 'adult_tshirt',
+                child: Text(
+                  menuL10n?.adultTshirtTemplate ?? 'Adult T-Shirt Template',
+                ),
+              ),
+              PopupMenuItem(
+                value: 'long_sleeve',
+                child: Text(
+                  menuL10n?.longSleeveTemplate ?? 'Long Sleeve Template',
+                ),
+              ),
+              PopupMenuItem(
+                value: 'dual_sweep',
+                child: Text(
+                  menuL10n?.dualSweepTemplate ?? 'Dual Sweep Template',
+                ),
+              ),
+            ];
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildButtonSelectorBar(
+    BuildContext context,
+    Map<int, AirPreset> presetsById,
+    Map<int, String> customNames,
+    Map<int, int> customColors,
+    AppLocalizations? l10n,
+    SequencerProgrammingState seqState,
+  ) {
+    final selectedSlot = seqState.selectedButtonId;
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (int slot = 1; slot <= 4; slot++) ...[
+            if (slot > 1) const SizedBox(width: 6),
+            Expanded(
+              child: _SequencerButtonTile(
+                key: Key('sequencer_button_$slot'),
+                slot: slot,
+                name: _buttonDisplayName(slot, presetsById, customNames, l10n),
+                buttonColor: _buttonColor(context, slot, customColors),
+                isSelected: selectedSlot == slot,
+                isDirty: selectedSlot == slot && seqState.isDirty,
+                enabled: !_isBusy,
+                onTap: () => _onSelectButton(slot),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStepTile(
+    BuildContext context,
+    int index,
+    List<List<int>> draftSteps,
+    SequencerProgrammingState seqState,
+    SequencerProgrammingNotifier seqNotifier,
+    Map<int, int> moduleNumbers,
+    AppLocalizations? l10n,
+  ) {
+    final channels = draftSteps[index];
+    final isDual = channels.length > 1;
+    final isEmpty = channels.isEmpty;
+    final isSelected = seqState.selectedStepIndex == index;
+    final flap1 = channels.isNotEmpty
+        ? _formatStepChannel(context, channels[0], moduleNumbers)
+        : '';
+    final flap2 =
+        isDual ? _formatStepChannel(context, channels[1], moduleNumbers) : '';
+
+    return Material(
+      color: isSelected
+          ? (isEmpty
+                  ? AppColors.of(context).amber
+                  : AppColors.of(context).cyan)
+              .withValues(alpha: 0.08)
+          : AppColors.of(context).surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(
+          color: isSelected
+              ? (isEmpty
+                  ? AppColors.of(context).amber
+                  : AppColors.of(context).cyan)
+              : AppColors.of(context).border.withValues(alpha: 0.6),
+          width: isSelected ? 1.5 : 1,
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: ListTile(
+        dense: true,
+        visualDensity: const VisualDensity(vertical: -2),
+        selected: isSelected,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+        onTap: () => seqNotifier.selectStep(index),
+        leading: Container(
+          width: 26,
+          height: 26,
+          decoration: BoxDecoration(
+            color: isSelected
+                ? (isEmpty
+                        ? AppColors.of(context).amber
+                        : AppColors.of(context).cyan)
+                    .withValues(alpha: 0.25)
+                : AppColors.of(context).surfaceHighlight,
+            borderRadius: BorderRadius.circular(13),
+            border: Border.all(
+              color: isSelected
+                  ? (isEmpty
+                      ? AppColors.of(context).amber
+                      : AppColors.of(context).cyan)
+                  : AppColors.of(context).border,
+            ),
+          ),
+          child: Center(
+            child: Text(
+              '${index + 1}',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: isEmpty
+                    ? AppColors.of(context).amber
+                    : AppColors.of(context).cyan,
+              ),
+            ),
+          ),
+        ),
+        title: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: isDual
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          flap1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.of(context).textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 1),
+                        Text(
+                          flap2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.of(context).textPrimary,
+                          ),
+                        ),
+                      ],
+                    )
+                  : Text(
+                      isEmpty
+                          ? (l10n?.tapPanelsHint ??
+                              'Tap 1–2 motor panels on grid')
+                          : flap1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: isEmpty
+                            ? AppColors.of(context).amber
+                            : AppColors.of(context).textPrimary,
+                      ),
+                    ),
+            ),
+            if (isDual) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 4,
+                  vertical: 1,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.of(context).purple.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(3),
+                ),
+                child: Text(
+                  l10n?.dualBadge ?? 'DUAL',
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.of(context).purple,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+        subtitle: Text(
+          isEmpty
+              ? (l10n?.requiresMotorizedPanel ??
+                  'Requires at least 1 motorized panel (max 2)')
+              : (isSelected
+                  ? (l10n?.selectedChangePanelsHint ??
+                      'Selected • Tap grid panels to change (max 2)')
+                  : (l10n?.stepOfTotal(
+                            index + 1,
+                            draftSteps.length,
+                          ) ??
+                      'Step ${index + 1} of ${draftSteps.length}')),
+          style: TextStyle(
+            fontSize: 10,
+            color: isEmpty
+                ? AppColors.of(context).amber
+                : (isSelected
+                    ? AppColors.of(context).cyan
+                    : AppColors.of(context).textMuted),
+          ),
+        ),
+        trailing: IconButton(
+          icon: const Icon(Icons.close, size: 18),
+          tooltip: l10n?.removeStepTooltip ?? 'Remove Step',
+          onPressed: () => _removeStep(index),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoMotorizedWarning(
+    BuildContext context,
+    AppLocalizations? l10n,
+  ) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppTokens.space8),
+      decoration: BoxDecoration(
+        color: AppColors.of(context).amber.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: AppColors.of(context).amber.withValues(alpha: 0.5),
+        ),
+      ),
+      child: Text(
+        l10n?.requiresMotorizedModuleWarning ??
+            'Routine requires at least one Motorized module from Fabrica Arrangement.',
+        style: TextStyle(
+          fontSize: 11,
+          color: AppColors.of(context).amber,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAddStepButton(
+    BuildContext context,
+    List<List<int>> draftSteps,
+    Map<int, int> moduleNumbers,
+    AppLocalizations? l10n,
+  ) {
+    return OutlinedButton.icon(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: AppColors.of(context).cyan,
+        backgroundColor: AppColors.of(context).cyan.withValues(alpha: 0.08),
+        side: BorderSide(color: AppColors.of(context).cyan, width: 1.5),
+        minimumSize: const Size(double.infinity, 46),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+      icon: const Icon(Icons.add_circle_outline, size: 20),
+      label: Text(
+        draftSteps.length >= FoldRoutine.maxSteps
+            ? (l10n?.routineFull ?? 'ROUTINE FULL (16/16 STEPS)')
+            : (l10n?.addStepCount(draftSteps.length) ??
+                'ADD STEP (${draftSteps.length}/16)'),
+        style: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 0.6,
+        ),
+      ),
+      onPressed:
+          draftSteps.length >= FoldRoutine.maxSteps || moduleNumbers.isEmpty
+              ? null
+              : _addStep,
+    );
+  }
+
+  Widget _buildActionButtons(
+    BuildContext context,
+    int selectedSlot,
+    Color selectedButtonColor,
+    Color saveTextColor,
+    AppLocalizations? l10n,
+  ) {
+    return Row(
+      children: [
+        Expanded(
+          flex: 3,
+          child: ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.of(context).surfaceHighlight,
+              foregroundColor: AppColors.of(context).cyan,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: 11,
+              ),
+            ),
+            icon: const Icon(Icons.play_arrow, size: 18),
+            label: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                l10n?.previewOnRobot ?? 'PREVIEW ON ROBOT',
+                maxLines: 1,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            onPressed: _isBusy ? null : _previewOnRobot,
+          ),
+        ),
+        const SizedBox(width: AppTokens.space8),
+        Expanded(
+          flex: 3,
+          child: ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: selectedButtonColor,
+              foregroundColor: saveTextColor,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: 11,
+              ),
+            ),
+            icon: const Icon(Icons.save, size: 18),
+            label: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                '${l10n?.saveToButton ?? 'SAVE TO BUTTON'} $selectedSlot',
+                maxLines: 1,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            onPressed: _isBusy ? null : _saveSelectedButton,
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.watch(buttonConfigProvider);
@@ -446,132 +912,123 @@ class _TimelineSequencerWidgetState
     final moduleNumbers = _moduleNumbersForArrangement(arrangement);
     final hasMotorized = _hasAtLeastOneMotorizedModule(arrangement);
 
+    if (widget.fillViewport) {
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final mapMaxHeight =
+              (constraints.maxHeight * 0.28).clamp(124.0, 188.0).toDouble();
+          return Column(
+            children: [
+              // Pinned top section: Button selector + template menu + compact Flap Map
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildHeaderRow(context, l10n, seqState),
+                    const SizedBox(height: 6),
+                    _buildButtonSelectorBar(
+                      context,
+                      presetsById,
+                      customNames,
+                      customColors,
+                      l10n,
+                      seqState,
+                    ),
+                    if (_statusMessage != null) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        _statusMessage!,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontFamily: 'monospace',
+                          color: _statusColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                    if (widget.showEmbeddedFlapMap) ...[
+                      const SizedBox(height: 8),
+                      FabricaCompactFlapMap(maxGridHeight: mapMaxHeight),
+                    ],
+                  ],
+                ),
+              ),
+              Divider(height: 1, color: AppColors.of(context).border),
+
+              // Scrollable middle section: Steps list + Add Step button
+              Expanded(
+                child: ListView(
+                  key: const Key('sequencer_steps_scroll_view'),
+                  controller: _stepsScrollController,
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                  children: [
+                    for (int i = 0; i < draftSteps.length; i++) ...[
+                      if (i > 0) const SizedBox(height: 6),
+                      _buildStepTile(
+                        context,
+                        i,
+                        draftSteps,
+                        seqState,
+                        seqNotifier,
+                        moduleNumbers,
+                        l10n,
+                      ),
+                    ],
+                    if (!hasMotorized) ...[
+                      const SizedBox(height: AppTokens.space8),
+                      _buildNoMotorizedWarning(context, l10n),
+                    ],
+                    const SizedBox(height: AppTokens.space12),
+                    _buildAddStepButton(context, draftSteps, moduleNumbers, l10n),
+                  ],
+                ),
+              ),
+
+              // Pinned bottom bar: Preview & Save to Button N
+              Container(
+                key: const Key('sequencer_pinned_action_bar'),
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+                decoration: BoxDecoration(
+                  color: AppColors.of(context).surface,
+                  border: Border(
+                    top: BorderSide(color: AppColors.of(context).border),
+                  ),
+                ),
+                child: _buildActionButtons(
+                  context,
+                  selectedSlot,
+                  selectedButtonColor,
+                  saveTextColor,
+                  l10n,
+                ),
+              ),
+            ],
+          );
+        },
+      );
+    }
+
+    // Standalone card layout (used when embedded inside an outer scrollable container)
     return Card(
       child: Padding(
         padding: AppTokens.paddingCard,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header & Template Actions
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Row(
-                    children: [
-                      Icon(Icons.tune, color: AppColors.of(context).cyan, size: 20),
-                      const SizedBox(width: AppTokens.space8),
-                      Flexible(
-                        child: Text(
-                          l10n?.foldingTimeline ??
-                              (widget.config.title.isNotEmpty
-                                  ? widget.config.title.toUpperCase()
-                                  : 'TIMELINE SEQUENCER'),
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.of(context).cyan,
-                            letterSpacing: 0.8,
-                          ),
-                        ),
-                      ),
-                      if (seqState.isDirty) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.of(context)
-                                .amber
-                                .withValues(alpha: 0.16),
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(
-                              color: AppColors.of(context)
-                                  .amber
-                                  .withValues(alpha: 0.6),
-                            ),
-                          ),
-                          child: Text(
-                            'UNSAVED',
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 0.5,
-                              color: AppColors.of(context).amber,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                PopupMenuButton<String>(
-                  tooltip: l10n?.loadTemplate ?? 'Load Template',
-                  icon: const Icon(Icons.more_vert, size: 20),
-                  onSelected: _loadTemplate,
-                  itemBuilder: (context) {
-                    final menuL10n = AppLocalizations.of(context);
-                    return [
-                      PopupMenuItem(
-                        value: 'adult_tshirt',
-                        child: Text(
-                          menuL10n?.adultTshirtTemplate ??
-                              'Adult T-Shirt Template',
-                        ),
-                      ),
-                      PopupMenuItem(
-                        value: 'long_sleeve',
-                        child: Text(
-                          menuL10n?.longSleeveTemplate ??
-                              'Long Sleeve Template',
-                        ),
-                      ),
-                      PopupMenuItem(
-                        value: 'dual_sweep',
-                        child: Text(
-                          menuL10n?.dualSweepTemplate ?? 'Dual Sweep Template',
-                        ),
-                      ),
-                    ];
-                  },
-                ),
-              ],
-            ),
-
+            _buildHeaderRow(context, l10n, seqState),
             const SizedBox(height: AppTokens.space8),
-
-            // Compact 1x4 Hardware Button Selector (matches Control page buttons)
-            IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  for (int slot = 1; slot <= 4; slot++) ...[
-                    if (slot > 1) const SizedBox(width: 6),
-                    Expanded(
-                      child: _SequencerButtonTile(
-                        key: Key('sequencer_button_$slot'),
-                        slot: slot,
-                        name: _buttonDisplayName(
-                          slot,
-                          presetsById,
-                          customNames,
-                          l10n,
-                        ),
-                        buttonColor: _buttonColor(context, slot, customColors),
-                        isSelected: selectedSlot == slot,
-                        isDirty: selectedSlot == slot && seqState.isDirty,
-                        enabled: !_isBusy,
-                        onTap: () => _onSelectButton(slot),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
+            _buildButtonSelectorBar(
+              context,
+              presetsById,
+              customNames,
+              customColors,
+              l10n,
+              seqState,
             ),
-
             if (_statusMessage != null) ...[
               const SizedBox(height: 8),
               Text(
@@ -584,300 +1041,39 @@ class _TimelineSequencerWidgetState
                 ),
               ),
             ],
-
+            if (widget.showEmbeddedFlapMap) ...[
+              const SizedBox(height: AppTokens.space8),
+              const FabricaCompactFlapMap(),
+            ],
             const SizedBox(height: AppTokens.space12),
-
-            // Step List Display
             ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: draftSteps.length,
-              separatorBuilder: (context, index) => const Divider(height: 8),
-              itemBuilder: (context, index) {
-                final channels = draftSteps[index];
-                final isDual = channels.length > 1;
-                final isEmpty = channels.isEmpty;
-                final isSelected = seqState.selectedStepIndex == index;
-                final flap1 = channels.isNotEmpty
-                    ? _formatStepChannel(context, channels[0], moduleNumbers)
-                    : '';
-                final flap2 = isDual
-                    ? _formatStepChannel(context, channels[1], moduleNumbers)
-                    : '';
-
-                return Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    border: isSelected
-                        ? Border.all(
-                            color: isEmpty
-                                ? AppColors.of(context).amber
-                                : AppColors.of(context).cyan,
-                          )
-                        : null,
-                  ),
-                  child: ListTile(
-                    dense: true,
-                    selected: isSelected,
-                    selectedTileColor: (isEmpty
-                            ? AppColors.of(context).amber
-                            : AppColors.of(context).cyan)
-                        .withValues(alpha: 0.08),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 6),
-                    onTap: () => seqNotifier.selectStep(index),
-                    leading: Container(
-                      width: 26,
-                      height: 26,
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? (isEmpty
-                                    ? AppColors.of(context).amber
-                                    : AppColors.of(context).cyan)
-                                .withValues(alpha: 0.25)
-                            : AppColors.of(context).surfaceHighlight,
-                        borderRadius: BorderRadius.circular(13),
-                        border: Border.all(
-                          color: isSelected
-                              ? (isEmpty
-                                  ? AppColors.of(context).amber
-                                  : AppColors.of(context).cyan)
-                              : AppColors.of(context).border,
-                        ),
-                      ),
-                      child: Center(
-                        child: Text(
-                          '${index + 1}',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: isEmpty
-                                ? AppColors.of(context).amber
-                                : AppColors.of(context).cyan,
-                          ),
-                        ),
-                      ),
-                    ),
-                    title: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          child: isDual
-                              ? Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      flap1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.of(context).textPrimary,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      flap2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.of(context).textPrimary,
-                                      ),
-                                    ),
-                                  ],
-                                )
-                              : Text(
-                                  isEmpty
-                                      ? (l10n?.tapPanelsHint ??
-                                          'Tap 1–2 motor panels on grid')
-                                      : flap1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                    color: isEmpty
-                                        ? AppColors.of(context).amber
-                                        : AppColors.of(context).textPrimary,
-                                  ),
-                                ),
-                        ),
-                        if (isDual) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 4,
-                              vertical: 1,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.of(context)
-                                  .purple
-                                  .withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(3),
-                            ),
-                            child: Text(
-                              l10n?.dualBadge ?? 'DUAL',
-                              style: TextStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.of(context).purple,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    subtitle: Text(
-                      isEmpty
-                          ? (l10n?.requiresMotorizedPanel ??
-                              'Requires at least 1 motorized panel (max 2)')
-                          : (isSelected
-                              ? (l10n?.selectedChangePanelsHint ??
-                                  'Selected • Tap grid panels to change (max 2)')
-                              : (l10n?.stepOfTotal(
-                                        index + 1,
-                                        draftSteps.length,
-                                      ) ??
-                                  'Step ${index + 1} of ${draftSteps.length}')),
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: isEmpty
-                            ? AppColors.of(context).amber
-                            : (isSelected
-                                ? AppColors.of(context).cyan
-                                : AppColors.of(context).textMuted),
-                      ),
-                    ),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.close, size: 18),
-                      tooltip: l10n?.removeStepTooltip ?? 'Remove Step',
-                      onPressed: () => _removeStep(index),
-                    ),
-                  ),
-                );
-              },
+              separatorBuilder: (context, index) => const SizedBox(height: 6),
+              itemBuilder: (context, index) => _buildStepTile(
+                context,
+                index,
+                draftSteps,
+                seqState,
+                seqNotifier,
+                moduleNumbers,
+                l10n,
+              ),
             ),
-
             if (!hasMotorized) ...[
               const SizedBox(height: AppTokens.space8),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(AppTokens.space8),
-                decoration: BoxDecoration(
-                  color: AppColors.of(context).amber.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(
-                    color: AppColors.of(context).amber.withValues(alpha: 0.5),
-                  ),
-                ),
-                child: Text(
-                  l10n?.requiresMotorizedModuleWarning ??
-                      'Routine requires at least one Motorized module from Fabrica Arrangement.',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: AppColors.of(context).amber,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
+              _buildNoMotorizedWarning(context, l10n),
             ],
-
             const SizedBox(height: AppTokens.space12),
-
-            // Large Add Step Button
-            OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.of(context).cyan,
-                backgroundColor:
-                    AppColors.of(context).cyan.withValues(alpha: 0.08),
-                side: BorderSide(color: AppColors.of(context).cyan, width: 1.5),
-                minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              icon: const Icon(Icons.add_circle_outline, size: 22),
-              label: Text(
-                draftSteps.length >= FoldRoutine.maxSteps
-                    ? (l10n?.routineFull ?? 'ROUTINE FULL (16/16 STEPS)')
-                    : (l10n?.addStepCount(draftSteps.length) ??
-                        'ADD STEP (${draftSteps.length}/16)'),
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.6,
-                ),
-              ),
-              onPressed:
-                  draftSteps.length >= FoldRoutine.maxSteps || moduleNumbers.isEmpty
-                      ? null
-                      : () => seqNotifier.addEmptyStep(
-                            maxSteps: FoldRoutine.maxSteps,
-                          ),
-            ),
-
+            _buildAddStepButton(context, draftSteps, moduleNumbers, l10n),
             const SizedBox(height: AppTokens.space12),
-
-            // Operation Action Buttons
-            Row(
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.of(context).surfaceHighlight,
-                      foregroundColor: AppColors.of(context).cyan,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 10,
-                      ),
-                    ),
-                    icon: const Icon(Icons.play_arrow, size: 18),
-                    label: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        l10n?.previewOnRobot ?? 'PREVIEW ON ROBOT',
-                        maxLines: 1,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    onPressed: _isBusy ? null : _previewOnRobot,
-                  ),
-                ),
-                const SizedBox(width: AppTokens.space8),
-                Expanded(
-                  flex: 3,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: selectedButtonColor,
-                      foregroundColor: saveTextColor,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 10,
-                      ),
-                    ),
-                    icon: const Icon(Icons.save, size: 18),
-                    label: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        '${l10n?.saveToButton ?? 'SAVE TO BUTTON'} $selectedSlot',
-                        maxLines: 1,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    onPressed: _isBusy ? null : _saveSelectedButton,
-                  ),
-                ),
-              ],
+            _buildActionButtons(
+              context,
+              selectedSlot,
+              selectedButtonColor,
+              saveTextColor,
+              l10n,
             ),
           ],
         ),
@@ -928,7 +1124,7 @@ class _SequencerButtonTile extends StatelessWidget {
           onTap: enabled ? onTap : null,
           borderRadius: BorderRadius.circular(10),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
@@ -957,8 +1153,8 @@ class _SequencerButtonTile extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      width: 36,
-                      height: 36,
+                      width: 34,
+                      height: 34,
                       padding: const EdgeInsets.all(3),
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
@@ -1002,7 +1198,7 @@ class _SequencerButtonTile extends StatelessWidget {
                           child: Text(
                             '$slot',
                             style: TextStyle(
-                              fontSize: 15,
+                              fontSize: 14,
                               fontWeight: FontWeight.w900,
                               color: numberColor,
                             ),
@@ -1010,14 +1206,14 @@ class _SequencerButtonTile extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 5),
+                    const SizedBox(height: 4),
                     Text(
                       name,
                       maxLines: 2,
                       textAlign: TextAlign.center,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 10.5,
                         fontWeight:
                             isSelected ? FontWeight.w700 : FontWeight.w600,
                         height: 1.15,

@@ -579,5 +579,97 @@ void main() {
       await tester.pumpAndSettle();
       expect(mockTransport.writtenControlPointPayloads, isEmpty);
     });
+
+    testWidgets(
+        'Option A fixed split workspace pins 1x4 buttons, compact flap map, and bottom bar while scrolling steps',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 740));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: Scaffold(
+              body: TimelineSequencerWidget(
+                config: AirWidgetConfig(
+                  type: 'timeline-sequencer',
+                  title: 'Folding Timeline',
+                ),
+                showEmbeddedFlapMap: true,
+                fillViewport: true,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Verify Option A layout hierarchy without setup chrome
+      final btnBarY =
+          tester.getTopLeft(find.byKey(const Key('sequencer_button_1'))).dy;
+      final mapY = tester
+          .getTopLeft(find.byKey(const Key('sequencer_compact_flap_map')))
+          .dy;
+      final stepsY = tester
+          .getTopLeft(find.byKey(const Key('sequencer_steps_scroll_view')))
+          .dy;
+      final actionBarY = tester
+          .getTopLeft(find.byKey(const Key('sequencer_pinned_action_bar')))
+          .dy;
+
+      expect(btnBarY, lessThan(mapY));
+      expect(mapY, lessThan(stepsY));
+      expect(stepsY, lessThan(actionBarY));
+      expect(find.text('EDIT ARRANGEMENT'), findsNothing);
+      expect(find.text('CONTROLLER'), findsNothing);
+
+      // Tap motorized flap #6 directly on the compact map -> adds Ch 2 to Step 1 and marks dirty
+      await tester.tap(
+        find.descendant(
+          of: find.byKey(const Key('sequencer_compact_flap_map')),
+          matching: find.text('#6'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        container.read(sequencerProgrammingProvider).draftSteps[0],
+        equals([0, 2]),
+      );
+      expect(container.read(sequencerProgrammingProvider).isDirty, isTrue);
+      expect(find.text('UNSAVED'), findsOneWidget);
+
+      // Add several steps and scroll the middle list -> top bar, flap map, and bottom bar stay pinned
+      for (int i = 0; i < 6; i++) {
+        container.read(sequencerProgrammingProvider.notifier).addEmptyStep();
+      }
+      await tester.pumpAndSettle();
+
+      await tester.drag(
+        find.byKey(const Key('sequencer_steps_scroll_view')),
+        const Offset(0, -300),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.getTopLeft(find.byKey(const Key('sequencer_button_1'))).dy,
+        equals(btnBarY),
+      );
+      expect(
+        tester
+            .getTopLeft(find.byKey(const Key('sequencer_compact_flap_map')))
+            .dy,
+        greaterThanOrEqualTo(mapY),
+      );
+      expect(
+        tester
+            .getTopLeft(find.byKey(const Key('sequencer_pinned_action_bar')))
+            .dy,
+        equals(actionBarY),
+      );
+    });
   });
 }

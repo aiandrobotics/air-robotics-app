@@ -46,7 +46,7 @@ void main() {
       expect(profile.screens.length, equals(3));
       expect(profile.screens[0].title, equals('Control'));
       expect(profile.screens[1].title, equals('Sequencer'));
-      expect(profile.screens[2].title, equals('Calibrate'));
+      expect(profile.screens[2].title, equals('Arrangement'));
     });
 
     test('rejects profile with missing mandatory fields', () {

@@ -13,6 +13,7 @@ import '../core/theme/app_tokens.dart';
 import '../l10n/app_localizations.dart';
 import '../visualizers/fabrica/fabrica_arrangement_provider.dart';
 import '../visualizers/fabrica/sequencer_programming_provider.dart';
+import 'widget_catalog/timeline_sequencer_widget.dart';
 import 'widget_registry.dart';
 
 /// Dynamic, profile-driven screen and tab scaffold.
@@ -624,7 +625,7 @@ class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
                         const SizedBox(width: 8),
                         Flexible(
                           child: Text(
-                            l10n?.bleDiagnostics ?? 'Diagnostics & Debugger',
+                            'Debug Panel',
                             style: TextStyle(color: AppColors.of(context).textPrimary),
                           ),
                         ),
@@ -664,6 +665,27 @@ class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
     AirScreenConfig screen,
     WidgetRegistry registry,
   ) {
+    final sequencerConfig = screen.widgets
+        .where((w) => w.type == 'timeline-sequencer')
+        .firstOrNull;
+    if (sequencerConfig != null &&
+        screen.widgets.every(
+          (w) => w.type == 'timeline-sequencer' || w.type == 'visualizer',
+        )) {
+      final hasFabricaVisualizer = screen.widgets.any(
+        (w) =>
+            w.type == 'visualizer' &&
+            (w.props['visualizer_id'] == 'fabrica-flap-grid' ||
+                w.props['visualizer_id'] == null),
+      );
+      return TimelineSequencerWidget(
+        key: ValueKey(screen.id),
+        config: sequencerConfig,
+        showEmbeddedFlapMap: hasFabricaVisualizer,
+        fillViewport: true,
+      );
+    }
+
     return ListView.separated(
       key: ValueKey(screen.id),
       padding: AppTokens.paddingScreen,
@@ -742,6 +764,8 @@ class _DynamicScreenScaffoldState extends ConsumerState<DynamicScreenScaffold> {
         return Icons.gamepad;
       case 'tune' || 'sequencer':
         return Icons.tune;
+      case 'grid' || 'arrangement' || 'layout':
+        return Icons.grid_view_rounded;
       case 'build' || 'calibrate':
         return Icons.build;
       case 'terminal' || 'diagnostics':

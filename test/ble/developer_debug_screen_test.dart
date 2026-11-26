@@ -42,12 +42,19 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Check header and connection state
-      expect(find.text('BLE Hardware Debugger'), findsOneWidget);
+      // Check header, tabs, and connection state
+      expect(find.text('Debug Panel'), findsOneWidget);
+      expect(find.text('Diagnostics'), findsOneWidget);
+      expect(find.text('Calibrate'), findsOneWidget);
       expect(find.text('DISCONNECTED'), findsOneWidget);
       expect(find.text('ACTIVE DEVICE PROFILE'), findsOneWidget);
       expect(find.text('QUICK ACTIONS & SAFETY'), findsOneWidget);
       expect(find.text('LIVE TELEMETRY INSPECTOR (FAB2)'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('RAW HEX COMMAND INJECTOR (FAB1)'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text('RAW HEX COMMAND INJECTOR (FAB1)'), findsOneWidget);
 
       // Enter hex opcode 0E (Identify)
@@ -411,6 +418,12 @@ void main() {
 
       // 9. Frequency >= 5.0 Hz badge is rendered (line 535)
       expect(find.textContaining('10.0 Hz'), findsOneWidget);
+
+      // 10. Calibrate tab inside Debug Panel shows Servo Manual Jog
+      await tester.tap(find.text('Calibrate'));
+      await tester.pumpAndSettle();
+      expect(find.text('SERVO MANUAL JOG'), findsOneWidget);
+      expect(find.text('HOME ALL'), findsOneWidget);
     });
   });
 }

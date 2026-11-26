@@ -139,14 +139,17 @@
       ]
     },
     {
-      "id": "screen_calibration",
-      "title": "Calibrate",
-      "icon": "build",
+      "id": "screen_arrangement",
+      "title": "Arrangement",
+      "icon": "grid",
       "widgets": [
         {
-          "type": "jog-slider-bank",
-          "title": "Servo Manual Jog",
-          "props": { "drag_throttle_ms": 50 }
+          "type": "visualizer",
+          "title": "Fabrica Arrangement",
+          "props": {
+            "visualizer_id": "fabrica-flap-grid",
+            "editable": true
+          }
         }
       ]
     }

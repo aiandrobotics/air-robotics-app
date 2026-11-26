@@ -1302,6 +1302,346 @@ class _LegendChip extends StatelessWidget {
   }
 }
 
+/// Compact read-only interactive flap picker embedded directly in the
+/// Sequencer split workspace.
+///
+/// Omits hardware setup chrome (header, legend, Edit button, and controller
+/// strip) and auto-scales cell height to fit within [maxGridHeight] so users
+/// can tap motorized panels for the selected step without scroll ping-pong.
+class FabricaCompactFlapMap extends ConsumerWidget {
+  final double maxGridHeight;
+
+  const FabricaCompactFlapMap({
+    super.key,
+    this.maxGridHeight = 184.0,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final arrangement = ref.watch(fabricaArrangementProvider);
+    final seqState = ref.watch(sequencerProgrammingProvider);
+    final seqNotifier = ref.read(sequencerProgrammingProvider.notifier);
+
+    final columns = arrangement.gridColumns;
+    final rows = arrangement.gridRows;
+    const gap = 4.0;
+    final cellHeight = ((maxGridHeight - (rows - 1) * gap) / rows)
+        .clamp(24.0, 48.0)
+        .toDouble();
+    final gridHeight = math.max(cellHeight, rows * cellHeight + (rows - 1) * gap);
+    final ultraCompact = cellHeight < 38.0 || columns >= 5;
+
+    return Container(
+      key: const Key('sequencer_compact_flap_map'),
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: AppColors.of(context).surface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.of(context).border),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.touch_app_outlined,
+                size: 13,
+                color: AppColors.of(context).cyan,
+              ),
+              const SizedBox(width: 5),
+              Expanded(
+                child: Text(
+                  AppLocalizations.of(context)
+                          ?.stepSelectedHint(seqState.selectedStepIndex + 1) ??
+                      'Step ${seqState.selectedStepIndex + 1} selected: Tap 1–2 Motorized panels on the grid',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.of(context).textSecondary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final cellWidth = (constraints.maxWidth + gap) / columns;
+              return SizedBox(
+                width: constraints.maxWidth,
+                height: gridHeight,
+                child: Stack(
+                  children: [
+                    for (final panel in arrangement.panels)
+                      Positioned(
+                        left: panel.col * cellWidth,
+                        top: panel.row * (cellHeight + gap),
+                        width: panel.colSpan * cellWidth - gap,
+                        height: panel.rowSpan * cellHeight +
+                            (panel.rowSpan - 1) * gap,
+                        child: () {
+                          final isMotor =
+                              panel.type == FabricaPanelType.motorized &&
+                                  panel.motorChannel != null;
+                          final stepNums = isMotor
+                              ? seqState
+                                  .stepNumbersForChannel(panel.motorChannel!)
+                              : const <int>[];
+                          final isHighlighted = isMotor &&
+                              seqState
+                                  .isChannelHighlighted(panel.motorChannel!);
+
+                          return _CompactFlapTile(
+                            flapNumber:
+                                arrangement.flapNumberForPanel(panel.id),
+                            panel: panel,
+                            isMotor: isMotor,
+                            isHighlighted: isHighlighted,
+                            stepNumbers: stepNums,
+                            ultraCompact: ultraCompact,
+                            onTap: () {
+                              if (!isMotor) {
+                                ScaffoldMessenger.of(context)
+                                  ..clearSnackBars()
+                                  ..showSnackBar(
+                                    SnackBar(
+                                      content: const Text(
+                                        'Only Motorized panels can be added to a routine.',
+                                      ),
+                                      duration: const Duration(seconds: 2),
+                                      backgroundColor:
+                                          AppColors.of(context).amber,
+                                    ),
+                                  );
+                                return;
+                              }
+                              final msg = seqNotifier.tapMotorizedPanel(panel);
+                              if (msg != null) {
+                                ScaffoldMessenger.of(context)
+                                  ..clearSnackBars()
+                                  ..showSnackBar(
+                                    SnackBar(
+                                      content: Text(msg),
+                                      duration: const Duration(seconds: 2),
+                                      backgroundColor:
+                                          AppColors.of(context).amber,
+                                    ),
+                                  );
+                              }
+                            },
+                          );
+                        }(),
+                      ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CompactFlapTile extends StatelessWidget {
+  final int flapNumber;
+  final FabricaPanel panel;
+  final bool isMotor;
+  final bool isHighlighted;
+  final List<int> stepNumbers;
+  final bool ultraCompact;
+  final VoidCallback onTap;
+
+  const _CompactFlapTile({
+    required this.flapNumber,
+    required this.panel,
+    required this.isMotor,
+    required this.isHighlighted,
+    required this.stepNumbers,
+    required this.ultraCompact,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    final accent = isMotor
+        ? colors.cyan
+        : (panel.type == FabricaPanelType.follower
+            ? colors.purple
+            : colors.textMuted);
+
+    final bgColor = isMotor
+        ? accent.withValues(alpha: isHighlighted ? 0.28 : 0.11)
+        : colors.surfaceHighlight.withValues(alpha: 0.35);
+    final borderColor = isHighlighted
+        ? colors.textPrimary
+        : (isMotor
+            ? accent.withValues(alpha: 0.6)
+            : colors.border.withValues(alpha: 0.45));
+
+    final stepBadgeText = stepNumbers.length <= 2
+        ? stepNumbers.join(',')
+        : '${stepNumbers.take(2).join(',')}+';
+
+    return Material(
+      color: bgColor,
+      borderRadius: BorderRadius.circular(6),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(6),
+        child: Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: ultraCompact ? 4 : 6,
+            vertical: ultraCompact ? 2 : 3,
+          ),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: borderColor,
+              width: isHighlighted ? 2 : 1,
+            ),
+          ),
+          child: ultraCompact
+              ? Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Flexible(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '#$flapNumber',
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: isMotor ? accent : colors.textMuted,
+                            ),
+                          ),
+                          if (isMotor && panel.motorChannel != null) ...[
+                            const SizedBox(width: 3),
+                            Flexible(
+                              child: Text(
+                                'C${panel.motorChannel! + 1}',
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.w600,
+                                  color: colors.textSecondary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    if (stepNumbers.isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 3,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: colors.emerald.withValues(alpha: 0.24),
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                        child: Text(
+                          stepBadgeText,
+                          style: TextStyle(
+                            fontSize: 8,
+                            fontWeight: FontWeight.bold,
+                            color: colors.emerald,
+                          ),
+                        ),
+                      ),
+                  ],
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '#$flapNumber',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: isMotor ? accent : colors.textMuted,
+                          ),
+                        ),
+                        if (stepNumbers.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 1,
+                            ),
+                            decoration: BoxDecoration(
+                              color: colors.emerald.withValues(alpha: 0.24),
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                            child: Text(
+                              stepBadgeText,
+                              style: TextStyle(
+                                fontSize: 8,
+                                fontWeight: FontWeight.bold,
+                                color: colors.emerald,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        if (isMotor) ...[
+                          Icon(
+                            Icons.electric_bolt,
+                            size: 9,
+                            color: colors.cyan,
+                          ),
+                          const SizedBox(width: 2),
+                        ],
+                        Expanded(
+                          child: Text(
+                            isMotor && panel.motorChannel != null
+                                ? (AppLocalizations.of(context)?.channelNumber(
+                                          panel.motorChannel! + 1,
+                                        ) ??
+                                    'Channel ${panel.motorChannel! + 1}')
+                                : (panel.type == FabricaPanelType.follower
+                                    ? (AppLocalizations.of(context)
+                                            ?.followerBadge ??
+                                        panel.type.shortLabel)
+                                    : (AppLocalizations.of(context)
+                                            ?.baseBadge ??
+                                        panel.type.shortLabel)),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                              color: isMotor
+                                  ? colors.textSecondary
+                                  : colors.textMuted,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Dedicated full-screen page for editing the Fabrica modular grid layout.
 class FabricaArrangementEditorScreen extends StatelessWidget {
   final AirWidgetConfig config;

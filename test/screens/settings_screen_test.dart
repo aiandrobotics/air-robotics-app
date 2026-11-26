@@ -283,10 +283,10 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        // Bottom navigation tabs in Bengali
+        // Bottom navigation tabs in Bengali (Control, Sequencer, Arrangement)
         expect(find.text('নিয়ন্ত্রণ'), findsOneWidget);
         expect(find.text('সিকোয়েন্সার'), findsOneWidget);
-        expect(find.text('ক্যালিব্রেটর'), findsOneWidget);
+        expect(find.text('Arrangement'), findsOneWidget);
 
         // Control tab (default index 0)
         expect(find.text('সব হোম করুন'), findsOneWidget);
@@ -296,12 +296,25 @@ void main() {
         // Switch to Sequencer tab
         await tester.tap(find.text('সিকোয়েন্সার'));
         await tester.pumpAndSettle();
-        expect(find.text('FABRICA বিন্যাস'), findsOneWidget);
+        expect(find.byKey(const Key('sequencer_compact_flap_map')), findsOneWidget);
         expect(find.text('ফোল্ডিং টাইমলাইন'), findsOneWidget);
+        expect(
+          find.text('ধাপ 1 নির্বাচিত: গ্রিডে ১–২টি মোটরচালিত প্যানেল ট্যাপ করুন'),
+          findsOneWidget,
+        );
         expect(find.text('রোবটে প্রিভিউ'), findsOneWidget);
         expect(find.text('বাটনে সংরক্ষণ করুন 1'), findsOneWidget);
 
-        // Switch to Calibrator tab
+        // Switch to Arrangement tab
+        await tester.tap(find.text('Arrangement'));
+        await tester.pumpAndSettle();
+        expect(find.text('FABRICA বিন্যাস'), findsOneWidget);
+
+        // Open Debug Panel -> Calibrator tab in Bengali
+        await tester.tap(find.byTooltip('আরও হার্ডওয়্যার বিকল্প'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Debug Panel'));
+        await tester.pumpAndSettle();
         await tester.tap(find.text('ক্যালিব্রেটর'));
         await tester.pumpAndSettle();
         expect(find.text('সার্ভো ম্যানুয়াল জোগ'), findsOneWidget);

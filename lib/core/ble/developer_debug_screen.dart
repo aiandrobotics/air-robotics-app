@@ -8,6 +8,8 @@ import '../profile/device_profile.dart';
 import '../profile/profile_providers.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_tokens.dart';
+import '../../l10n/app_localizations.dart';
+import '../../ui_engine/widget_catalog/jog_slider_bank_widget.dart';
 import '../../ui_engine/widget_catalog/telemetry_strip_chart_widget.dart';
 import 'ble_providers.dart';
 import 'ble_transport_interface.dart';
@@ -116,29 +118,64 @@ class _DeveloperDebugScreenState extends ConsumerState<DeveloperDebugScreen> {
     final metrics =
         metricsAsync.value ?? ref.read(telemetryBusProvider).currentMetrics;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('BLE Hardware Debugger'),
-        actions: [
-          IconButton(
-            icon: Icon(isScanning ? Icons.stop : Icons.refresh),
-            tooltip: isScanning ? 'Stop Scan' : 'Scan for Robots',
-            onPressed: () {
-              if (isScanning) {
-                scanner.stopScan();
-                _addLog('Scan stopped');
-              } else {
-                scanner.startScan();
-                _addLog('Scanning for Fabrica-* / AIR-* peripherals...');
-              }
-            },
+    final l10n = AppLocalizations.of(context);
+
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Debug Panel'),
+          actions: [
+            IconButton(
+              icon: Icon(isScanning ? Icons.stop : Icons.refresh),
+              tooltip: isScanning ? 'Stop Scan' : 'Scan for Robots',
+              onPressed: () {
+                if (isScanning) {
+                  scanner.stopScan();
+                  _addLog('Scan stopped');
+                } else {
+                  scanner.startScan();
+                  _addLog('Scanning for Fabrica-* / AIR-* peripherals...');
+                }
+              },
+            ),
+          ],
+          bottom: TabBar(
+            indicatorColor: AppColors.of(context).cyan,
+            labelColor: AppColors.of(context).cyan,
+            unselectedLabelColor: AppColors.of(context).textSecondary,
+            tabs: [
+              Tab(
+                height: 44,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.bug_report_outlined, size: 17),
+                    const SizedBox(width: 6),
+                    Text(l10n?.tabDiagnostics ?? 'Diagnostics'),
+                  ],
+                ),
+              ),
+              Tab(
+                height: 44,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.build_outlined, size: 17),
+                    const SizedBox(width: 6),
+                    Text(l10n?.tabCalibrator ?? 'Calibrate'),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-      body: SafeArea(
-        child: ListView(
-          padding: AppTokens.paddingScreen,
-          children: [
+        ),
+        body: SafeArea(
+          child: TabBarView(
+            children: [
+              ListView(
+                padding: AppTokens.paddingScreen,
+                children: [
             // 1. Connection Status Pill
             Card(
               child: Padding(
@@ -817,7 +854,22 @@ class _DeveloperDebugScreenState extends ConsumerState<DeveloperDebugScreen> {
                 props: {'window_seconds': 10},
               ),
             ),
-          ],
+                ],
+              ),
+              ListView(
+                padding: AppTokens.paddingScreen,
+                children: const [
+                  JogSliderBankWidget(
+                    config: AirWidgetConfig(
+                      type: 'jog-slider-bank',
+                      title: 'Servo Manual Jog',
+                      props: {'drag_throttle_ms': 50},
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
